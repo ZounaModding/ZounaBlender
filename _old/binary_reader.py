@@ -33,14 +33,14 @@ class Whence(IntEnum):
 class BrStruct:
     """Base class for objects passed to BinaryReader's `read_struct` and `write_struct` methods.\n
     Any type passed to `read_struct` and any object passed to `write_struct` must inherit from this class.\n
-    Override `__br_read__` and `__br_write__` methods from this class to set up BinaryReader to read your classes.\n"""
+    Override `__br_read__` and `__br_write__` methods from this class to set up BinaryReader to read your classes.\n
+    """
 
     def __init__(self) -> None:
-        """If this class will be used with BinaryReader's `read_struct` method, then this method MUST receive zero arguments after `self`.\n
-        """
+        """If this class will be used with BinaryReader's `read_struct` method, then this method MUST receive zero arguments after `self`.\n"""
         pass
 
-    def __br_read__(self, br: 'BinaryReader', *args) -> None:
+    def __br_read__(self, br: "BinaryReader", *args) -> None:
         """Called once when `BinaryReader.read_struct` is called on this class.\n
         This method must accept at least 1 parameter (other than `self`).\n
         The first parameter will be the BinaryReader instance which `read_struct` was called from.
@@ -50,7 +50,7 @@ class BrStruct:
         """
         pass
 
-    def __br_write__(self, br: 'BinaryReader', *args) -> None:
+    def __br_write__(self, br: "BinaryReader", *args) -> None:
         """Called once when `BinaryReader.write_struct` is called on an instance of this class.\n
         This method must accept at least 1 parameter (other than `self`).\n
         The first parameter will be the BinaryReader instance which `write_struct` was called from.
@@ -63,13 +63,20 @@ class BrStruct:
 
 class BinaryReader:
     """A buffer reader/writer containing a mutable bytearray.\n
-    Allows reading and writing various data types, while advancing the position of the buffer on each operation."""
+    Allows reading and writing various data types, while advancing the position of the buffer on each operation.
+    """
+
     __buf: bytearray
     __idx: int
     __endianness: Endian
     __encoding: str
 
-    def __init__(self, buffer: bytearray = bytearray(), endianness: Endian = Endian.LITTLE, encoding='utf-8'):
+    def __init__(
+        self,
+        buffer: bytearray = bytearray(),
+        endianness: Endian = Endian.LITTLE,
+        encoding="utf-8",
+    ):
         """Constructs a BinaryReader with the given buffer, endianness, and encoding and sets its position to 0.\n
         If buffer is not given, a new bytearray() is created. If endianness is not given, it is set to little endian.\n
         Default encoding is UTF-8. Will throw an exception if encoding is unknown.
@@ -161,9 +168,9 @@ class BinaryReader:
         if size >= 0:
             trimmed = self.size() - size
 
-        if (trimmed > 0):
+        if trimmed > 0:
             self.__buf = self.__buf[:size]
-            if (self.__idx > size):
+            if self.__idx > size:
                 self.__idx = self.size()
         else:
             trimmed = 0
@@ -186,16 +193,17 @@ class BinaryReader:
         elif whence == Whence.END:
             new_offset = len(self.__buf) - offset
         else:
-            raise Exception('BinaryReader Error: invalid whence value.')
+            raise Exception("BinaryReader Error: invalid whence value.")
 
         if self.__past_eof(new_offset) or new_offset < 0:
             raise Exception(
-                'BinaryReader Error: cannot seek farther than buffer length.')
+                "BinaryReader Error: cannot seek farther than buffer length."
+            )
 
         self.__idx = new_offset
 
     @contextmanager
-    def seek_to(self, offset: int, whence: Whence = Whence.BEGIN) -> 'BinaryReader':
+    def seek_to(self, offset: int, whence: Whence = Whence.BEGIN) -> "BinaryReader":
         """Same as `seek(offset, whence)`, but can be used with the `with` statement in a new context.\n
         Upon returning to the old context, the original position of the buffer before the `with` statement will be restored.\n
         Will return a reference of the BinaryReader to be used for `as` in the `with` statement.\n
@@ -215,12 +223,12 @@ class BinaryReader:
         """Sets the default encoding of the BinaryReader when reading/writing strings.\n
         Will throw an exception if the encoding is unknown.
         """
-        str.encode('', encoding)
+        str.encode("", encoding)
         self.__encoding = encoding
 
     @staticmethod
     def is_iterable(x) -> bool:
-        return hasattr(x, '__iter__') and not isinstance(x, (str, bytes))
+        return hasattr(x, "__iter__") and not isinstance(x, (str, bytes))
 
     def __read_type(self, format: str, count=1):
         i = self.__idx
@@ -230,7 +238,8 @@ class BinaryReader:
 
         if self.__past_eof(new_offset):
             raise Exception(
-                'BinaryReader Error: cannot read farther than buffer length.')
+                "BinaryReader Error: cannot read farther than buffer length."
+            )
 
         self.__idx = new_offset
         return struct.unpack_from(end + str(count) + format, self.__buf, i)
@@ -254,12 +263,12 @@ class BinaryReader:
                 if string[-1] == 0:
                     break
 
-            return string.split(b'\x00', 1)[0].decode(encode)
+            return string.split(b"\x00", 1)[0].decode(encode)
 
         if size < 0:
-            raise ValueError('size cannot be negative')
+            raise ValueError("size cannot be negative")
 
-        return self.read_bytes(size).split(b'\x00', 1)[0].decode(encode)
+        return self.read_bytes(size).split(b"\x00", 1)[0].decode(encode)
 
     def read_str_to_token(self, token: str, encoding=None) -> str:
         """Reads a string until a string token is found.\n
@@ -279,7 +288,7 @@ class BinaryReader:
             if len(string) >= token_size:
                 i += 1
 
-        return string.split(b'\x00', 1)[0].decode(encode)
+        return string.split(b"\x00", 1)[0].decode(encode)
 
     def read_int64(self, count=None) -> Union[int, Tuple[int]]:
         """Reads a signed 64-bit integer.\n
@@ -368,8 +377,7 @@ class BinaryReader:
         Additional arguments given after `count` will be passed to the `__br_read__` method of `cls`.\n
         """
         if not (cls and issubclass(cls, BrStruct)):
-            raise Exception(
-                f'BinaryReader Error: {cls} is not a subclass of BrStruct.')
+            raise Exception(f"BinaryReader Error: {cls} is not a subclass of BrStruct.")
 
         if count is not None:
             result = []
@@ -415,7 +423,9 @@ class BinaryReader:
         If encoding is `None` (default), will use the BinaryReader's encoding.\n
         Returns the number of bytes written (including the null byte if it was added).
         """
-        bytes_obj = string.encode(encoding or self.__encoding) + (b'\x00' if null else b'')
+        bytes_obj = string.encode(encoding or self.__encoding) + (
+            b"\x00" if null else b""
+        )
         self.write_bytes(bytes_obj)
         return len(bytes_obj)
 
@@ -427,9 +437,11 @@ class BinaryReader:
         """
 
         if size < 0:
-            raise ValueError('size cannot be negative')
+            raise ValueError("size cannot be negative")
 
-        self.write_bytes(string.encode(encoding or self.__encoding)[:size].ljust(size, b'\x00'))
+        self.write_bytes(
+            string.encode(encoding or self.__encoding)[:size].ljust(size, b"\x00")
+        )
 
     def write_int64(self, value: int) -> None:
         """Writes a signed 64-bit integer.\n
@@ -497,9 +509,12 @@ class BinaryReader:
         If value is iterable, will call the `__br_write__` method of all elements in the given iterable.\n
         Additional arguments given after `value` will be passed to the `__br_write__` method of `value`.\n
         """
-        if not isinstance(value, BrStruct) and not (self.is_iterable(value) and all(isinstance(e, BrStruct) for e in value)):
+        if not isinstance(value, BrStruct) and not (
+            self.is_iterable(value) and all(isinstance(e, BrStruct) for e in value)
+        ):
             raise Exception(
-                f'BinaryReader Error: {value} is not an instance of BrStruct.')
+                f"BinaryReader Error: {value} is not an instance of BrStruct."
+            )
 
         if self.is_iterable(value):
             for s in value:

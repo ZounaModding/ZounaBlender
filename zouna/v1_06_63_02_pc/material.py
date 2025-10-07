@@ -1,0 +1,257 @@
+from ...common.constants import (
+    RatMaterialCollisionFlags,
+    RatMaterialRenderFlags,
+    RatMaterialCodeFlags,
+    RatSurfaceTypes,
+    RatSoundTypes,
+    collision_flag_to_rat_surface_type,
+    collision_flag_to_rat_sound_type,
+)
+from ..bff.io import (
+    MaterialV106_63_02PCBody,
+    MaterialV106_63_02_PC,
+    AnimationV1291_03_06PCLinkHeader,
+)
+from ..common.resource import load_dependencies
+from ..generic.material import Material
+from .bitmap import BitmapV1_06_63_02_PC
+
+
+class MaterialV1_06_63_02_PC:
+    file_path: str
+    material: MaterialV106_63_02_PC
+
+    def __init__(self, material: MaterialV106_63_02_PC = None):
+        if material is not None:
+            self.material = material.material_v1_06_63_02_pc
+            self.file_path = material.file_path
+            print(f"self.file_path: {self.file_path}")
+
+    @staticmethod
+    def from_generic(generic_material: Material):
+        """
+        Convert a generic Material into a MaterialV1_06_63_02_PC instance.
+        """
+        if generic_material is None:
+            return None
+
+        body = MaterialV106_63_02PCBody(
+            cdcdcdcd=0xCDCDCDCD,
+            collision_flag=0,
+            diffuse=[1.0, 1.0, 1.0, 1.0],
+            emission=[0.0, 0.0, 0.0],
+            general_flag=0,
+            object_flag=0,
+            params=0,
+            render_flag=0x800000,
+            rotation=0.0,
+            scale=[1.0, 1.0],
+            specular=[0.0, 0.0, 0.0],
+            specular_pow=1.0,
+            textures=[""] * 4,
+            translation=[0.0, 0.0],
+            uv_transform_matrix=None,
+        )
+
+        def safe_int(val):
+            try:
+                return int(val)
+            except (ValueError, TypeError):
+                return val
+
+        link_header = AnimationV1291_03_06PCLinkHeader(
+            link_name=safe_int(generic_material.name), names=[], links=[]
+        )
+
+        material_pc = MaterialV1_06_63_02_PC()
+        material_pc.file_path = generic_material.file_path
+        material_pc.material = MaterialV106_63_02_PC(
+            body=body,
+            class_name="Material_Z",
+            link_header=link_header,
+            link_name=None,
+            name=safe_int(generic_material.file_name or ""),
+        )
+
+        material_pc.material.name = safe_int(generic_material.file_name or "")
+        material_pc.material.link_header.link_name = safe_int(
+            generic_material.name or ""
+        )
+
+        diffuse_color = getattr(generic_material, "diffuse_color", (1.0, 1.0, 1.0))
+        opacity = getattr(generic_material, "opacity", 1.0)
+        body.diffuse = [diffuse_color[0], diffuse_color[1], diffuse_color[2], opacity]
+
+        body.emission = list(
+            getattr(generic_material, "emissive_color", (0.0, 0.0, 0.0))
+        )
+        body.specular = list(
+            getattr(generic_material, "specular_color", (0.0, 0.0, 0.0))
+        )
+        body.specular_pow = getattr(generic_material, "specular_power", 1.0)
+        body.params = getattr(generic_material, "rat_params", 0)
+        body.rotation = getattr(generic_material, "uv_rotation", 0.0)
+        body.translation = list(getattr(generic_material, "uv_translation", (0.0, 0.0)))
+        body.scale = list(getattr(generic_material, "uv_scale", (1.0, 1.0)))
+
+        import math
+
+        tx, ty = body.translation
+        sx, sy = body.scale
+        theta = body.rotation
+        cos_r = math.cos(theta)
+        sin_r = math.sin(theta)
+
+        body.uv_transform_matrix = [
+            [sx * cos_r, -sy * sin_r, 0.0, tx],
+            [sx * sin_r, sy * cos_r, 0.0, ty],
+            [-1.0, -1.0, 1.0, 0.0],
+        ]
+
+        body.render_flag = 0
+        if getattr(generic_material, "env_alpha_mask", False):
+            body.render_flag |= RatMaterialRenderFlags.ALPHA_MASK
+        if getattr(generic_material, "invisible", False):
+            body.render_flag |= RatMaterialRenderFlags.INVISIBLE
+        if getattr(generic_material, "uv_clamp_u", False):
+            body.render_flag |= RatMaterialRenderFlags.UV_CLAMP_U
+        if getattr(generic_material, "uv_clamp_v", False):
+            body.render_flag |= RatMaterialRenderFlags.UV_CLAMP_V
+        if getattr(generic_material, "double_sided", False):
+            body.render_flag |= RatMaterialRenderFlags.DOUBLE_SIDED
+        if getattr(generic_material, "rat_ice", False):
+            body.render_flag |= RatMaterialRenderFlags.ICE
+
+        collision_flag = 0
+
+        rat_surface = getattr(
+            generic_material, "rat_surface_type", RatSurfaceTypes.NONE
+        )
+        surface_map = {
+            RatSurfaceTypes.NONE: RatMaterialCollisionFlags.NONE,
+            RatSurfaceTypes.SOLID: RatMaterialCollisionFlags.SOLID,
+            RatSurfaceTypes.WATER: RatMaterialCollisionFlags.WATER
+            | RatMaterialCollisionFlags.SOLID,
+            RatSurfaceTypes.SLIPPERY: RatMaterialCollisionFlags.SLIPPERY
+            | RatMaterialCollisionFlags.SOLID,
+            RatSurfaceTypes.STICKY: RatMaterialCollisionFlags.STICKY
+            | RatMaterialCollisionFlags.SOLID,
+            RatSurfaceTypes.SLIDE_JUMP: RatMaterialCollisionFlags.SLIDE_JUMP
+            | RatMaterialCollisionFlags.SOLID,
+            RatSurfaceTypes.SLIDE_NO_JUMP: RatMaterialCollisionFlags.SLIDE_NO_JUMP
+            | RatMaterialCollisionFlags.SOLID,
+        }
+        collision_flag |= surface_map.get(rat_surface, 0)
+
+        rat_sound = getattr(generic_material, "rat_sound_type", None)
+        sound_map = {
+            RatSoundTypes.WOOD: RatMaterialCollisionFlags.SOUND_WOOD,
+            RatSoundTypes.DIRT: RatMaterialCollisionFlags.SOUND_DIRT,
+            RatSoundTypes.GRASS: RatMaterialCollisionFlags.SOUND_GRASS,
+            RatSoundTypes.METAL: RatMaterialCollisionFlags.SOUND_METAL,
+            RatSoundTypes.WATER: RatMaterialCollisionFlags.SOUND_WATER,
+            RatSoundTypes.MUD: RatMaterialCollisionFlags.SOUND_MUD,
+            RatSoundTypes.SQUEAKY: RatMaterialCollisionFlags.SOUND_SQUEAKY,
+            RatSoundTypes.POPPING: RatMaterialCollisionFlags.SOUND_POPPING,
+        }
+        if rat_sound is not None and rat_sound is not RatSoundTypes.STONE:
+            collision_flag |= sound_map.get(rat_sound, 0)
+
+        if getattr(generic_material, "rat_footprints_while_off", False):
+            collision_flag |= RatMaterialCollisionFlags.FOOTPRINTS_OFF
+        if getattr(generic_material, "rat_footprints_while_on", False):
+            collision_flag |= RatMaterialCollisionFlags.FOOTPRINTS_ON
+
+        body.collision_flag = collision_flag
+
+        texture_slots = ["tex_diffuse", "tex_envmap", "tex_normal", "tex_specular"]
+        slot_to_flag = {
+            "tex_diffuse": RatMaterialCodeFlags.DIFFUSE,
+            "tex_envmap": RatMaterialCodeFlags.ENVMAP,
+            "tex_normal": RatMaterialCodeFlags.NORMAL,
+            "tex_specular": RatMaterialCodeFlags.SPECULAR,
+        }
+        body.textures = []
+        for slot_name in texture_slots:
+            generic_bitmap = getattr(generic_material, slot_name, None)
+            if generic_bitmap is not None:
+                versioned_bitmap = BitmapV1_06_63_02_PC.from_generic(generic_bitmap)
+                body.textures.append(safe_int(versioned_bitmap.bitmap.name))
+                material_pc.material.link_header.names.append(
+                    safe_int(versioned_bitmap.bitmap.name)
+                )
+                body.general_flag |= slot_to_flag[slot_name]
+            else:
+                body.textures.append("")
+
+        return material_pc
+
+    def to_generic(self) -> Material:
+        body: MaterialV106_63_02PCBody = self.material.body
+        generic_material = Material()
+
+        generic_material.file_path = self.file_path
+        generic_material.file_name = str(self.material.name)
+        generic_material.name = str(self.material.link_header.link_name)
+
+        for i, texture in enumerate(list(body.textures)):
+            print(f"Texture {i}: {texture}")
+        generic_bitmaps = load_dependencies(self.file_path, list(body.textures))
+        for bitmap in generic_bitmaps:
+            if bitmap is not None:
+                print(f"{bitmap.file_name!r} ->", str(bitmap.name))
+            else:
+                print(f"bitmap was not found")
+
+        generic_material.diffuse_color = tuple(body.diffuse[:3])
+        generic_material.opacity = body.diffuse[3]
+        generic_material.emissive_color = tuple(body.emission)
+        generic_material.specular_color = tuple(body.specular)
+        generic_material.specular_power = body.specular_pow
+        generic_material.rat_params = body.params
+        generic_material.uv_rotation = body.rotation
+        generic_material.uv_translation = tuple(body.translation)
+        generic_material.uv_scale = tuple(body.scale)
+
+        # Render flags
+        generic_material.env_alpha_mask = bool(
+            body.render_flag & RatMaterialRenderFlags.ALPHA_MASK
+        )
+        generic_material.invisible = bool(
+            body.render_flag & RatMaterialRenderFlags.INVISIBLE
+        )
+        generic_material.uv_clamp_u = bool(
+            body.render_flag & RatMaterialRenderFlags.UV_CLAMP_U
+        )
+        generic_material.uv_clamp_v = bool(
+            body.render_flag & RatMaterialRenderFlags.UV_CLAMP_V
+        )
+        generic_material.double_sided = bool(
+            body.render_flag & RatMaterialRenderFlags.DOUBLE_SIDED
+        )
+        generic_material.rat_ice = bool(body.render_flag & RatMaterialRenderFlags.ICE)
+
+        # Collision flags
+        collision_flag = body.collision_flag
+        generic_material.rat_surface_type = collision_flag_to_rat_surface_type(
+            collision_flag
+        )
+        generic_material.rat_sound_type = collision_flag_to_rat_sound_type(
+            collision_flag
+        )
+        generic_material.rat_deep_water = bool(
+            generic_material.rat_surface_type == RatSurfaceTypes.WATER
+            and collision_flag & RatMaterialCollisionFlags.SOUND_1
+        )
+        generic_material.rat_footprints_while_off = bool(
+            collision_flag & RatMaterialCollisionFlags.FOOTPRINTS_OFF
+        )
+        generic_material.rat_footprints_while_on = bool(
+            collision_flag & RatMaterialCollisionFlags.FOOTPRINTS_ON
+        )
+
+        slots = ["tex_diffuse", "tex_envmap", "tex_normal", "tex_specular"]
+        for slot_name, bitmap in zip(slots, generic_bitmaps):
+            setattr(generic_material, slot_name, bitmap)
+
+        return generic_material
