@@ -3,7 +3,7 @@ from bpy.types import PropertyGroup, Material, Image
 from bpy.utils import register_class, unregister_class
 
 from ...common.constants import RatSurfaceTypes, RatSoundTypes
-from ...common.util import get_material_from_context, create_preview_texture
+from ...common.util import get_material_from_context
 from ...common.material import create_zouna_material_node_tree
 from .resource import ZounaResourceProperty
 from ..handlers import make_handler
@@ -63,7 +63,6 @@ rat_sound_types = [
 
 
 def update_zouna_material_property(self, context):
-    print("!!!Update gets called!!!")
     mat = get_material_from_context(context)
     if mat is not None and mat.is_zouna and mat.zouna_material == self:
         create_zouna_material_node_tree(mat)
@@ -73,16 +72,16 @@ def update_zouna_material_property(self, context):
 
 def update_zouna_material_image_property(self, context):
     if self.diffuse is not None:
-        if not getattr(self.diffuse, "preview", None):
+        if not self.diffuse.preview:
             self.diffuse.preview_ensure()
     if self.envmap is not None:
-        if not getattr(self.envmap, "preview", None):
+        if not self.envmap.preview:
             self.envmap.preview_ensure()
     if self.normal is not None:
-        if not getattr(self.normal, "preview", None):
+        if not self.normal.preview:
             self.normal.preview_ensure()
     if self.specular is not None:
-        if not getattr(self.specular, "preview", None):
+        if not self.specular.preview:
             self.specular.preview_ensure()
     update_zouna_material_property(self, context)
 

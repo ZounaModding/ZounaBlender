@@ -1,4 +1,6 @@
 from enum import Enum, StrEnum, IntFlag, IntEnum
+from typing import Dict, Tuple, Any
+from ..zouna.bff.io import Platform
 
 # Material constants
 
@@ -140,6 +142,63 @@ class RatMaterialCodeFlags(IntFlag):
     ENVMAP = 0x2
     NORMAL = 0x4
     SPECULAR = 0x8
+
+
+# Platform and Game enums, and version mapping
+
+
+class Game(StrEnum):
+    RATATOUILLE = "Ratatouille"
+    WALL_E = "Wall-E"
+
+
+class Version(StrEnum):
+    V1_06_63_02 = "v1.06.63.02 - Asobo Studio - Internal Cross Technology"
+    V1_291_03_06 = "v1.291.03.06 - Asobo Studio - Internal Cross Technology"
+
+
+VERSION_MAP: Dict[Tuple[Game, Platform], str] = {
+    (Game.RATATOUILLE, Platform.PC): Version.V1_06_63_02,
+    (Game.WALL_E, Platform.PC): Version.V1_291_03_06,
+}
+
+
+def supported_platforms_for_game(game: Game):
+    """Return list of Platform that have a VERSION_MAP entry for this game."""
+    return [p for (g, p) in VERSION_MAP.keys() if g == game]
+
+
+def supported_games_for_platform(platform: Platform):
+    """Return list of Game that have a VERSION_MAP entry for this platform."""
+    return [g for (g, p) in VERSION_MAP.keys() if p == platform]
+
+
+def resolve_game_platform(game: Game, platform: Platform):
+    """
+    Validate (game, platform) against VERSION_MAP.
+    If exact pair exists, return it.
+    If platform invalid for game -> pick first platform supported by game (if any).
+    If game invalid for platform -> pick first game that supports that platform.
+    As last resort return the first mapped pair available.
+    """
+    if (game, platform) in VERSION_MAP:
+        return game, platform
+
+    plats = supported_platforms_for_game(game)
+    if plats:
+        return game, plats[0]
+
+    games = supported_games_for_platform(platform)
+    if games:
+        return games[0], platform
+
+    if len(VERSION_MAP) > 0:
+        first_game, first_platform = next(iter(VERSION_MAP.keys()))
+        return first_game, first_platform
+
+    raise KeyError(
+        "No version mapping available. Fill VERSION_MAP with at least one (game,platform)->version entry."
+    )
 
 
 def collision_flag_to_rat_surface_type(collision_flag: int) -> RatSurfaceTypes:

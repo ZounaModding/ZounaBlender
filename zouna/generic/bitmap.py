@@ -1,5 +1,7 @@
-from ...common.constants import BmFormat, BmTransp
+import os
+from ...common.constants import BmFormat, BmTransp, PalFormat
 from .resource import Resource
+from ...common.util import read_dds_mipmap_count, read_dds_fourcc
 
 from pathlib import Path
 import bpy
@@ -7,11 +9,13 @@ import json
 
 
 class Bitmap(Resource):
-    width: float = (0.0,)
-    height: float = (0.0,)
-    format: BmFormat = (BmFormat.BM_8888,)
-    transp_format: BmTransp = (BmTransp.BM_NO_TRANSP,)
-    mip_count: int
+    width: int = 0
+    height: int = 0
+    format: BmFormat = BmFormat.BM_8888
+    palette_format: PalFormat = PalFormat.PAL_8888
+    transp_format: BmTransp = BmTransp.BM_NO_TRANSP
+    precalculated_size: int = 0
+    mip_count: int = 0
 
     def setup_zouna_bitmap(self, dds_path):
         try:
@@ -21,6 +25,7 @@ class Bitmap(Resource):
             return None
 
         image.name = self.name or dds_path.stem
+        print(f"Image name {image.name}")
         image.is_zouna = True
         image.zouna_bitmap.init_resource(self)
         image.zouna_bitmap.transp_format = self.transp_format.name
@@ -30,57 +35,69 @@ class Bitmap(Resource):
     @staticmethod
     def from_blender(blender_image):
         """
-        Construct a Bitmap from a bpy.types.Image.
+        Construct a Bitmap from a bpy.types.Image, reading the raw file data
+        from the image's linked filepath.
         """
         if blender_image is None:
             return None
 
         bitmap = Bitmap()
 
-        image_path_str = blender_image.filepath
-        image_path = Path(image_path_str)
-        parent_dir = image_path.parent
-        resource_json = parent_dir / "resource.json"
-        if resource_json.is_file():
-            with open(resource_json, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            bitmap_data = next(iter(data.get("class", {}).get("Bitmap", {}).values()))
-            link_header = bitmap_data.get("link_header", {})
-            link_name = link_header.get("link_name")
-
-            bitmap.file_path = str(resource_json)
-            bitmap.name = str(link_name)
-        else:
-            print("Error: no resource json")
+        image_path_str = blender_image.filepath_raw
+        if not image_path_str:
+            print(
+                f"Error: Blender image '{blender_image.name}' has no linked file path."
+            )
             return None
 
-        parent_dir_name = parent_dir.name
-        if ".Bitmap" in parent_dir_name:
-            bitmap.file_name = parent_dir_name.split(".Bitmap", 1)[0]
-        else:
-            maybe_container = parent_dir.parent.name
-            if ".Bitmap" in maybe_container:
-                bitmap.file_name = maybe_container.split(".Bitmap", 1)[0]
-            else:
-                print("Error: no resource folder")
-                return None
+        image_path = Path(bpy.path.abspath(image_path_str))
+
+        base_name, extension = os.path.splitext(blender_image.name)
+        bitmap.name = base_name
+        bitmap.file_name = base_name
+
+        try:
+            with open(image_path, "rb") as f:
+                bitmap.data = f.read()
+
+        except FileNotFoundError:
+            print(f"Error: Raw image file not found at {image_path}")
+            bitmap.data = b""
+        except Exception as e:
+            print(f"Error reading raw file data for {blender_image.name}: {e}")
+            bitmap.data = b""
+
+        bitmap.data_ext = "dds"
+        bitmap.precalculated_size = len(bitmap.data) if bitmap.data else 0
 
         w, h = blender_image.size
-        bitmap.width = float(w)
-        bitmap.height = float(h)
+        bitmap.width = w
+        bitmap.height = h
 
-        bitmap.mip_count = int(getattr(blender_image, "mipmaps", 1) or 1)
+        if bitmap.data:
+            mipmap_count = read_dds_mipmap_count(bitmap.data)
+            if mipmap_count > 0:
+                bitmap.mip_count = mipmap_count - 1
+            else:
+                bitmap.mip_count = 0
 
-        bitmap.format = BmFormat.BM_8888
+            fourcc = read_dds_fourcc(bitmap.data)
 
-        if bitmap.transp_format is None:
-            channels = (
-                blender_image.channels if hasattr(blender_image, "channels") else 4
-            )
-            bitmap.transp_format = (
-                BmTransp.BM_TRANSP if int(channels) >= 4 else BmTransp.BM_NO_TRANSP
-            )
+            if fourcc == "DXT5":
+                bitmap.format = BmFormat.BM_8888
+                # TODO: This can be other but for now it's fine
+                bitmap.transp_format = BmTransp.BM_NO_TRANSP
+            elif fourcc == "DXT1":
+                bitmap.format = BmFormat.BM_888
+                bitmap.transp_format = BmTransp.BM_NO_TRANSP
+            else:
+                bitmap.format = BmFormat.BM_8888
+
+        else:
+            bitmap.mip_count = 0
+            bitmap.format = BmFormat.BM_8888
+
+        bitmap.palette_format = PalFormat.PAL_8888
 
         return bitmap
 

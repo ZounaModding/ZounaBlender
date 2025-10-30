@@ -1,5 +1,14 @@
-from .classes import register_classes, unregister_classes
 import bpy
+import traceback
+from bpy.app.handlers import persistent
+
+from .classes import register_classes, unregister_classes
+from ..common.constants import (
+    Game,
+    supported_games_for_platform,
+    supported_platforms_for_game,
+)
+from ..zouna.bff.io import Platform
 
 
 def matrices_are_close(mat1, mat2, tol=1e-6):
@@ -72,6 +81,7 @@ def viewport_update():
     """
     Called every redraw of the 3D view; only updates if camera moved.
     """
+    # print(f"Viewport update called")
     for area in bpy.context.window.screen.areas:
         if area.type != "VIEW_3D":
             continue
@@ -90,12 +100,12 @@ def viewport_update():
                 continue
 
             LAST_VIEW_MATRIX[region_id] = current_matrix
-
+            # print(f"Viewport update called 2")
             for obj in bpy.context.scene.objects:
                 if obj.type != "MESH" or obj.mode != "OBJECT":
                     continue
                 mat = obj.active_material
-                if mat and getattr(mat, "is_zouna", False):
+                if mat and mat.is_zouna:
                     update_envmap_uv(obj, region3d)
 
 
@@ -114,11 +124,144 @@ def unregister_draw_handler():
         handler_ref = None
 
 
+game_items = [(g.value, g.value, g.value) for g in Game]
+
+platform_items = [(p.value, p.value, p.value) for p in Platform]
+
+
+def update_game(scene, context):
+    try:
+        game = Game(scene.zouna_game)
+
+        plats = supported_platforms_for_game(game)
+        if not plats:
+            first_plat = list(Platform)[0]
+            if scene.zouna_platform != first_plat.name:
+                scene.zouna_platform = first_plat.name
+            return
+
+        current_platform = Platform(scene.zouna_platform)
+        if current_platform not in plats:
+            scene.zouna_platform = plats[0].name
+    except Exception:
+        traceback.print_exc()
+
+
+def update_platform(scene, context):
+    try:
+        current_game = Game(scene.zouna_game)
+        selected_platform = Platform(scene.zouna_platform)
+        valid_platforms = supported_platforms_for_game(current_game)
+
+        prev_platform_value = scene.zouna_prev_platform
+
+        if selected_platform in valid_platforms:
+            scene.zouna_prev_platform = selected_platform.value
+            return
+
+        bpy.ops.zouna.show_warning(
+            "INVOKE_DEFAULT",
+            message=f"'{selected_platform.value}' is not supported for '{current_game.value}'.",
+        )
+
+        fallback_value = None
+        if prev_platform_value and any(
+            p.value == prev_platform_value for p in valid_platforms
+        ):
+            fallback_value = prev_platform_value
+        elif valid_platforms:
+            fallback_value = valid_platforms[0].value
+
+        if fallback_value and scene.zouna_platform != fallback_value:
+            scene.zouna_platform = fallback_value
+            scene.zouna_prev_platform = fallback_value
+        else:
+            bpy.ops.zouna.show_warning(
+                "INVOKE_DEFAULT",
+                message=f"No valid platform available for '{current_game.value}'. Keeping current selection.",
+            )
+
+    except Exception:
+        traceback.print_exc()
+
+
+def update_envmap_toggle(scene, context):
+    """
+    Update callback for the BoolProperty on the Scene.
+    'scene' here is the bpy.types.Scene instance whose property changed.
+    """
+    try:
+        if scene.zouna_envmap_toggle:
+            register_draw_handler()
+        else:
+            unregister_draw_handler()
+    except Exception:
+        traceback.print_exc()
+
+
+@persistent
+def zouna_on_load_post(dummy):
+    """After a file is loaded, check scenes and register handler if needed."""
+    try:
+        for s in bpy.data.scenes:
+            if getattr(s, "zouna_envmap_toggle", False):
+                register_draw_handler()
+                break
+    except Exception:
+        traceback.print_exc()
+
+
 def register_blender():
+    if not hasattr(bpy.types.Scene, "zouna_envmap_toggle"):
+        bpy.types.Scene.zouna_envmap_toggle = bpy.props.BoolProperty(
+            name="Render with Envmap",
+            description="(Expensive) Properly renders reflections for Envmap testing",
+            default=False,
+            update=update_envmap_toggle,
+        )
+    if not hasattr(bpy.types.Scene, "zouna_game"):
+        bpy.types.Scene.zouna_game = bpy.props.EnumProperty(
+            name="Game",
+            description="Select the game to export for",
+            items=game_items,
+            default=Game.RATATOUILLE,
+            update=update_game,
+        )
+    if not hasattr(bpy.types.Scene, "zouna_platform"):
+        bpy.types.Scene.zouna_platform = bpy.props.EnumProperty(
+            name="Platform",
+            description="Select the platform to export for",
+            items=platform_items,
+            default=Platform.PC.value,
+            update=update_platform,
+        )
+    if not hasattr(bpy.types.Scene, "zouna_prev_platform"):
+        bpy.types.Scene.zouna_prev_platform = bpy.props.StringProperty(
+            name="Previous Platform",
+            description="Stores last valid platform for game",
+            default="",
+            options={"HIDDEN"},
+        )
     register_classes()
-    register_draw_handler()
+
+    if zouna_on_load_post not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(zouna_on_load_post)
 
 
 def unregister_blender():
+    try:
+        unregister_draw_handler()
+    except Exception:
+        traceback.print_exc()
     unregister_classes()
-    unregister_draw_handler()
+    for prop_name in (
+        "zouna_envmap_toggle",
+        "zouna_game",
+        "zouna_platform",
+        "zouna_prev_platform",
+    ):
+        if hasattr(bpy.types.Scene, prop_name):
+            try:
+                delattr(bpy.types.Scene, prop_name)
+            except Exception:
+                traceback.print_exc()

@@ -32,7 +32,7 @@ class ImportResourceOperator(Operator):
 
 class ResourcePanel(Panel):
     bl_idname = "ZOUNA_PT_Resource_Panel"
-    bl_label = "Zouna Resources 3"
+    bl_label = "Zouna Panel"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "Zouna"
@@ -40,8 +40,21 @@ class ResourcePanel(Panel):
     def draw(self, context):
         layout = self.layout
         layout.label(text="Zouna")
+
         layout.operator("zouna.import_resource", text="Import Resource")
+        layout.operator("zouna.save_mesh", text="Save Active Zouna Mesh")
         layout.operator("zouna.save_material", text="Save Active Zouna Material")
+
+        layout.separator()
+
+        layout.label(text="Export options:")
+        layout.prop(context.scene, "zouna_game", text="Game")
+        layout.prop(context.scene, "zouna_platform", text="Platform")
+
+        layout.separator()
+
+        layout.label(text="Render options:")
+        layout.prop(context.scene, "zouna_envmap_toggle", text="Render with Envmap")
 
 
 panel_classes = [
@@ -56,5 +69,8 @@ def register_panel():
 
 
 def unregister_panel():
-    for cls in panel_classes:
-        unregister_class(cls)
+    for cls in reversed(panel_classes):
+        try:
+            unregister_class(cls)
+        except Exception:
+            traceback.print_exc()

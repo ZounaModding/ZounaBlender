@@ -96,8 +96,6 @@ class Material(Resource):
         """
         Create a Material (generic Zouna resource) from a Blender Material
         that was created via setup_zouna_material / zouna pipeline.
-
-        Uses direct attribute access (no getattr).
         Returns a Material instance or None on invalid input.
         """
         if blender_material is None:
@@ -136,8 +134,9 @@ class Material(Resource):
             )
             return None
 
+        # TODO: Check if it makes sense (together with other TODO in Mesh.from_generic)
         try:
-            material.file_name = zouna_properties.file_name
+            material.file_name = zouna_properties.file_name if zouna_properties.file_name != "DefaultFileName" else blender_material.name
         except AttributeError:
             print(
                 f"Material.file_path: Blender material '{blender_material.name}' missing 'file_path' property"
@@ -242,8 +241,8 @@ class Material(Resource):
             for attr in ("name", "file_path", "filepath", "image", "source"):
                 if hasattr(tex, attr):
                     val = getattr(tex, attr)
-                    if getattr(val, "__class__", None) and hasattr(val, "name"):
-                        candidates.append(f"{attr}={getattr(val, 'name')!r}")
+                    if val.__class__ and hasattr(val, "name"):
+                        candidates.append(f"{attr}={val.name!r}")
                     else:
                         candidates.append(f"{attr}={val!r}")
             if not candidates:
@@ -256,70 +255,70 @@ class Material(Resource):
 
         lines = []
         lines.append("Material:")
-        lines.append(f"  name: {getattr(self, 'name', None)!r}")
-        lines.append(f"  diffuse_color: {getattr(self, 'diffuse_color', None)!r}")
-        lines.append(f"  opacity: {getattr(self, 'opacity', None)!r}")
-        lines.append(f"  emissive_color: {getattr(self, 'emissive_color', None)!r}")
-        lines.append(f"  specular_color: {getattr(self, 'specular_color', None)!r}")
-        lines.append(f"  specular_power: {getattr(self, 'specular_power', None)!r}")
-        lines.append(f"  uv_rotation: {getattr(self, 'uv_rotation', None)!r}")
-        lines.append(f"  uv_translation: {getattr(self, 'uv_translation', None)!r}")
-        lines.append(f"  uv_scale: {getattr(self, 'uv_scale', None)!r}")
-        lines.append(f"  envmap_factor: {getattr(self, 'envmap_factor', None)!r}")
-        lines.append(f"  specular_factor: {getattr(self, 'specular_factor', None)!r}")
-        lines.append(f"  bump_factor: {getattr(self, 'bump_factor', None)!r}")
+        lines.append(f"  name: {self.name!r}")
+        lines.append(f"  diffuse_color: {self.diffuse_color!r}")
+        lines.append(f"  opacity: {self.opacity!r}")
+        lines.append(f"  emissive_color: {self.emissive_color!r}")
+        lines.append(f"  specular_color: {self.specular_color!r}")
+        lines.append(f"  specular_power: {self.specular_power!r}")
+        lines.append(f"  uv_rotation: {self.uv_rotation!r}")
+        lines.append(f"  uv_translation: {self.uv_translation!r}")
+        lines.append(f"  uv_scale: {self.uv_scale!r}")
+        lines.append(f"  envmap_factor: {self.envmap_factor!r}")
+        lines.append(f"  specular_factor: {self.specular_factor!r}")
+        lines.append(f"  bump_factor: {self.bump_factor!r}")
 
         lines.append("  textures:")
         lines.append(
-            f"    tex_diffuse: {fmt_texture(getattr(self, 'tex_diffuse', None))}"
+            f"    tex_diffuse: {fmt_texture(self.tex_diffuse)}"
         )
         lines.append(
-            f"    tex_envmap: {fmt_texture(getattr(self, 'tex_envmap', None))}"
+            f"    tex_envmap: {fmt_texture(self.tex_envmap)}"
         )
         lines.append(
-            f"    tex_normal: {fmt_texture(getattr(self, 'tex_normal', None))}"
+            f"    tex_normal: {fmt_texture(self.tex_normal)}"
         )
         lines.append(
-            f"    tex_specular: {fmt_texture(getattr(self, 'tex_specular', None))}"
+            f"    tex_specular: {fmt_texture(self.tex_specular)}"
         )
         lines.append(
-            f"    tex_add_normal: {fmt_texture(getattr(self, 'tex_add_normal', None))}"
+            f"    tex_add_normal: {fmt_texture(self.tex_add_normal)}"
         )
         lines.append(
-            f"    tex_occlusion: {fmt_texture(getattr(self, 'tex_occlusion', None))}"
+            f"    tex_occlusion: {fmt_texture(self.tex_occlusion)}"
         )
-        lines.append(f"    tex_dirt: {fmt_texture(getattr(self, 'tex_dirt', None))}")
+        lines.append(f"    tex_dirt: {fmt_texture(self.tex_dirt)}")
         lines.append(
-            f"    tex_normal_local: {fmt_texture(getattr(self, 'tex_normal_local', None))}"
+            f"    tex_normal_local: {fmt_texture(self.tex_normal_local)}"
         )
 
         lines.append("  flags:")
         lines.append(
-            f"    env_alpha_mask: {bool(getattr(self, 'env_alpha_mask', False))}"
+            f"    env_alpha_mask: {bool(self.env_alpha_mask)}"
         )
-        lines.append(f"    invisible: {bool(getattr(self, 'invisible', False))}")
-        lines.append(f"    uv_clamp_u: {bool(getattr(self, 'uv_clamp_u', False))}")
-        lines.append(f"    uv_clamp_v: {bool(getattr(self, 'uv_clamp_v', False))}")
-        lines.append(f"    double_sided: {bool(getattr(self, 'double_sided', False))}")
+        lines.append(f"    invisible: {bool(self.invisible)}")
+        lines.append(f"    uv_clamp_u: {bool(self.uv_clamp_u)}")
+        lines.append(f"    uv_clamp_v: {bool(self.uv_clamp_v)}")
+        lines.append(f"    double_sided: {bool(self.double_sided)}")
 
         lines.append("  rat specifics:")
-        lines.append(f"    rat_params: {getattr(self, 'rat_params', None)!r}")
+        lines.append(f"    rat_params: {self.rat_params!r}")
         lines.append(
-            f"    rat_surface_type: {fmt_enum(getattr(self, 'rat_surface_type', None))}"
+            f"    rat_surface_type: {fmt_enum(self.rat_surface_type)}"
         )
         lines.append(
-            f"    rat_sound_type: {fmt_enum(getattr(self, 'rat_sound_type', None))}"
+            f"    rat_sound_type: {fmt_enum(self.rat_sound_type)}"
         )
         lines.append(
-            f"    rat_deep_water: {bool(getattr(self, 'rat_deep_water', False))}"
+            f"    rat_deep_water: {bool(self.rat_deep_water)}"
         )
         lines.append(
-            f"    rat_footprints_while_on: {bool(getattr(self, 'rat_footprints_while_on', False))}"
+            f"    rat_footprints_while_on: {bool(self.rat_footprints_while_on)}"
         )
         lines.append(
-            f"    rat_footprints_while_off: {bool(getattr(self, 'rat_footprints_while_off', False))}"
+            f"    rat_footprints_while_off: {bool(self.rat_footprints_while_off)}"
         )
-        lines.append(f"    rat_ice: {bool(getattr(self, 'rat_ice', False))}")
+        lines.append(f"    rat_ice: {bool(self.rat_ice)}")
 
         if detailed_textures:
             lines.append("  (detailed texture info shown)")

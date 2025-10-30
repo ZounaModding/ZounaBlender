@@ -12,9 +12,9 @@ from ..bff.io import (
     MaterialV106_63_02_PC,
     AnimationV1291_03_06PCLinkHeader,
 )
-from ..common.resource import load_dependencies
+from ..common.resource import load_dependencies, save_dependencies
+from ...common.util import safe_int
 from ..generic.material import Material
-from .bitmap import BitmapV1_06_63_02_PC
 
 
 class MaterialV1_06_63_02_PC:
@@ -53,12 +53,6 @@ class MaterialV1_06_63_02_PC:
             uv_transform_matrix=None,
         )
 
-        def safe_int(val):
-            try:
-                return int(val)
-            except (ValueError, TypeError):
-                return val
-
         link_header = AnimationV1291_03_06PCLinkHeader(
             link_name=safe_int(generic_material.name), names=[], links=[]
         )
@@ -69,7 +63,7 @@ class MaterialV1_06_63_02_PC:
             body=body,
             class_name="Material_Z",
             link_header=link_header,
-            link_name=None,
+            link_name=safe_int(generic_material.file_name or ""),
             name=safe_int(generic_material.file_name or ""),
         )
 
@@ -78,21 +72,17 @@ class MaterialV1_06_63_02_PC:
             generic_material.name or ""
         )
 
-        diffuse_color = getattr(generic_material, "diffuse_color", (1.0, 1.0, 1.0))
-        opacity = getattr(generic_material, "opacity", 1.0)
+        diffuse_color = generic_material.diffuse_color
+        opacity = generic_material.opacity
         body.diffuse = [diffuse_color[0], diffuse_color[1], diffuse_color[2], opacity]
 
-        body.emission = list(
-            getattr(generic_material, "emissive_color", (0.0, 0.0, 0.0))
-        )
-        body.specular = list(
-            getattr(generic_material, "specular_color", (0.0, 0.0, 0.0))
-        )
-        body.specular_pow = getattr(generic_material, "specular_power", 1.0)
-        body.params = getattr(generic_material, "rat_params", 0)
-        body.rotation = getattr(generic_material, "uv_rotation", 0.0)
-        body.translation = list(getattr(generic_material, "uv_translation", (0.0, 0.0)))
-        body.scale = list(getattr(generic_material, "uv_scale", (1.0, 1.0)))
+        body.emission = list(generic_material.emissive_color)
+        body.specular = list(generic_material.specular_color)
+        body.specular_pow = generic_material.specular_power
+        body.params = generic_material.rat_params
+        body.rotation = generic_material.uv_rotation
+        body.translation = list(generic_material.uv_translation)
+        body.scale = list(generic_material.uv_scale)
 
         import math
 
@@ -108,25 +98,23 @@ class MaterialV1_06_63_02_PC:
             [-1.0, -1.0, 1.0, 0.0],
         ]
 
-        body.render_flag = 0
-        if getattr(generic_material, "env_alpha_mask", False):
+        body.render_flag = 0x800000
+        if generic_material.env_alpha_mask:
             body.render_flag |= RatMaterialRenderFlags.ALPHA_MASK
-        if getattr(generic_material, "invisible", False):
+        if generic_material.invisible:
             body.render_flag |= RatMaterialRenderFlags.INVISIBLE
-        if getattr(generic_material, "uv_clamp_u", False):
+        if generic_material.uv_clamp_u:
             body.render_flag |= RatMaterialRenderFlags.UV_CLAMP_U
-        if getattr(generic_material, "uv_clamp_v", False):
+        if generic_material.uv_clamp_v:
             body.render_flag |= RatMaterialRenderFlags.UV_CLAMP_V
-        if getattr(generic_material, "double_sided", False):
+        if generic_material.double_sided:
             body.render_flag |= RatMaterialRenderFlags.DOUBLE_SIDED
-        if getattr(generic_material, "rat_ice", False):
+        if generic_material.rat_ice:
             body.render_flag |= RatMaterialRenderFlags.ICE
 
         collision_flag = 0
 
-        rat_surface = getattr(
-            generic_material, "rat_surface_type", RatSurfaceTypes.NONE
-        )
+        rat_surface = generic_material.rat_surface_type
         surface_map = {
             RatSurfaceTypes.NONE: RatMaterialCollisionFlags.NONE,
             RatSurfaceTypes.SOLID: RatMaterialCollisionFlags.SOLID,
@@ -143,7 +131,7 @@ class MaterialV1_06_63_02_PC:
         }
         collision_flag |= surface_map.get(rat_surface, 0)
 
-        rat_sound = getattr(generic_material, "rat_sound_type", None)
+        rat_sound = generic_material.rat_sound_type
         sound_map = {
             RatSoundTypes.WOOD: RatMaterialCollisionFlags.SOUND_WOOD,
             RatSoundTypes.DIRT: RatMaterialCollisionFlags.SOUND_DIRT,
@@ -157,9 +145,9 @@ class MaterialV1_06_63_02_PC:
         if rat_sound is not None and rat_sound is not RatSoundTypes.STONE:
             collision_flag |= sound_map.get(rat_sound, 0)
 
-        if getattr(generic_material, "rat_footprints_while_off", False):
+        if generic_material.rat_footprints_while_off:
             collision_flag |= RatMaterialCollisionFlags.FOOTPRINTS_OFF
-        if getattr(generic_material, "rat_footprints_while_on", False):
+        if generic_material.rat_footprints_while_on:
             collision_flag |= RatMaterialCollisionFlags.FOOTPRINTS_ON
 
         body.collision_flag = collision_flag
@@ -171,16 +159,38 @@ class MaterialV1_06_63_02_PC:
             "tex_normal": RatMaterialCodeFlags.NORMAL,
             "tex_specular": RatMaterialCodeFlags.SPECULAR,
         }
+
         body.textures = []
-        for slot_name in texture_slots:
+        generic_bitmaps_to_save = []
+        export_attempted_slots = [False] * len(texture_slots)
+
+        for i, slot_name in enumerate(texture_slots):
             generic_bitmap = getattr(generic_material, slot_name, None)
+
             if generic_bitmap is not None:
-                versioned_bitmap = BitmapV1_06_63_02_PC.from_generic(generic_bitmap)
-                body.textures.append(safe_int(versioned_bitmap.bitmap.name))
-                material_pc.material.link_header.names.append(
-                    safe_int(versioned_bitmap.bitmap.name)
-                )
-                body.general_flag |= slot_to_flag[slot_name]
+                generic_bitmaps_to_save.append(generic_bitmap)
+                export_attempted_slots[i] = True
+
+        exported_keys = []
+        if generic_bitmaps_to_save:
+            exported_keys = save_dependencies(
+                generic_material.file_path, generic_bitmaps_to_save
+            )
+
+        key_index = 0
+        for i, slot_name in enumerate(texture_slots):
+            if export_attempted_slots[i]:
+                if key_index < len(exported_keys):
+                    final_key = exported_keys[key_index]
+
+                    body.textures.append(final_key)
+                    material_pc.material.link_header.names.append(final_key)
+                    body.general_flag |= slot_to_flag[slot_name]
+
+                    key_index += 1
+                else:
+                    body.textures.append("")
+
             else:
                 body.textures.append("")
 

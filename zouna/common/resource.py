@@ -1,6 +1,10 @@
+import re
 from ...blender.imp import import_resource
 from pathlib import Path
-from typing import Union, Iterable, Any
+from typing import List, Union, Iterable, Any
+from ...blender.exp import export_resource, member_name_from_generic
+from ...common.util import safe_int
+from ...zouna.generic.resource import Resource
 
 classes = [
     "Animation_Z",
@@ -79,6 +83,81 @@ classes = [
     "WorldRef_Z",
     "XRefNode_Z",
 ]
+
+
+def save_dependencies(
+    resource_path: str,
+    generic_resources: list[Resource],
+) -> list[Union[str, int]]:
+    """
+    Exports a list of generic resource objects to the dependency file structure
+    and returns the canonical link keys (names) of the successfully exported resources.
+    """
+    base = Path(resource_path).parent.parent
+    if not base.is_dir():
+        raise FileNotFoundError(f"Resources folder not found: {base!r}")
+
+    exported_keys: list[Union[str, int]] = []
+    # TODO: Add a config option to enable this branch
+    if False:
+        for generic in generic_resources:
+            resource_name = generic.file_name
+            if not resource_name:
+                print(
+                    f"Warning: Resource {generic!r} skipped, no 'file_name' attribute found."
+                )
+                continue
+            exported_keys.append(safe_int(resource_name))
+
+        print(f"Skipping export; returning {len(exported_keys)} dependency keys.")
+        return exported_keys
+
+    for generic in generic_resources:
+        resource_name = None
+        try:
+            resource_name = generic.file_name
+            if not resource_name:
+                print(
+                    f"Warning: Resource {generic!r} skipped, no 'file_name' attribute found."
+                )
+                continue
+
+            member_name = member_name_from_generic(generic)
+            print(f"Resource name: {resource_name}, Member name: {member_name}")
+
+            base_key = str(resource_name)
+            base_key = re.sub(r"\.\d+$", "", base_key)
+            base_key = base_key.replace(":", "_").replace(">", "_")
+            generic_class_name = generic.__class__.__name__
+            dependency_suffix = f"{generic_class_name}_Z"
+            current_key = base_key
+            dependency_dir = base / f"{current_key}.{dependency_suffix}.d"
+            counter = 2
+
+            while dependency_dir.is_dir():
+                print(
+                    f"Warning: Dependency folder already exists: {dependency_dir.name}. Attempting to rename..."
+                )
+                current_key = f"{base_key}__{counter}"
+                new_dir_name = f"{current_key}.{dependency_suffix}.d"
+                dependency_dir = base / new_dir_name
+                counter += 1
+
+            generic.file_name = current_key
+            final_key_name = current_key
+            print(f"Set generic.file_name to: {final_key_name}")
+            destination_path = dependency_dir / "resource.json"
+            print(f"---- EXPORTING DEPENDENCY {str(destination_path)} -----")
+            link_key = export_resource(generic, str(destination_path))
+            print(f"---- EXPORTED DEPENDENCY {str(destination_path)} -----")
+
+            exported_keys.append(safe_int(link_key))
+
+        except Exception as e:
+            print(f"Error saving dependency for resource {resource_name}: {e}")
+
+    print(f"Finished saving {len(exported_keys)} dependencies.")
+    return exported_keys
 
 
 def load_dependencies(

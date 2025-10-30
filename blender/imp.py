@@ -1,7 +1,7 @@
 from os.path import isfile
 import json
 from ..zouna.bff.io import bff_class_from_dict, BffClass
-from .handlers import get_handler
+from .handlers import get_import_handler
 
 
 def load_json(content):
@@ -10,16 +10,16 @@ def load_json(content):
     """
 
     def bad_constant(val):
-        raise ImportError("Bad constant: %s" % val)
+        raise Exception("Bad constant: %s" % val)
 
     try:
         text = str(content, encoding="utf-8")
         return json.loads(text, parse_constant=bad_constant)
     except ValueError as e:
-        raise ImportError("Bad: %s" % e.args[0])
+        raise Exception("Bad: %s" % e.args[0])
 
 
-def dispatch(bff_class: BffClass):
+def dispatch_import(bff_class: BffClass):
     """
     Handles a resource load for a given BffClass according to its properties (platform, version, class).
     """
@@ -36,7 +36,7 @@ def dispatch(bff_class: BffClass):
     if member_name is None:
         raise ValueError("No member is set on Class!")
 
-    handler = get_handler(platform, version, member_name)
+    handler = get_import_handler(platform, version, member_name)
     if handler is None:
         raise KeyError(f"No handler for {(platform, version, member_name)!r}")
 
@@ -48,7 +48,7 @@ def dispatch(bff_class: BffClass):
 
 def import_resource(filename):
     if not isfile(filename):
-        raise ImportError("Please select a file")
+        raise Exception("Please select a file")
 
     with open(filename, "rb") as f:
         content = memoryview(f.read())
@@ -58,9 +58,9 @@ def import_resource(filename):
         print(f"Filname {filename}")
         bff_class.file_path = filename
         print(f"Bff class filepath: {bff_class.file_path}")
-        return dispatch(bff_class)
+        return dispatch_import(bff_class)
     except AssertionError:
         import traceback
 
         traceback.print_exc()
-        raise ImportError("Error loading BFF resource")
+        raise Exception("Error loading BFF resource")

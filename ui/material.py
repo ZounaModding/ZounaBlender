@@ -1,7 +1,7 @@
 from pathlib import Path
 from ..common.material import create_zouna_material_node_tree
 from ..common.constants import RatSurfaceTypes
-from ..common.util import get_material_from_context, find_existing_preview_texture
+from ..common.util import get_material_from_context
 from ..zouna.generic.material import Material as GenericMaterial
 from ..zouna.v1_06_63_02_pc.material import MaterialV1_06_63_02_PC
 from ..zouna.bff.io import (
@@ -11,6 +11,7 @@ from ..zouna.bff.io import (
     Platform,
     Material as BffMaterial,
 )
+from ..blender.exp import export_resource
 
 import bpy
 import os
@@ -87,104 +88,10 @@ class SaveZounaMaterialOperator(bpy.types.Operator):
             print(f"FileName: {material.zouna_material.file_name}")
 
             generic_material = GenericMaterial.from_blender(material)
-            platform_material = MaterialV1_06_63_02_PC.from_generic(generic_material)
-
-            header = BffClassHeader(
-                platform=Platform.PC,
-                version="v1.06.63.02 - Asobo Studio - Internal Cross Technology",
-            )
-
-            wrapped_material = BffMaterial(
-                material_v1_06_63_02_pc=platform_material.material,
-                material_v1_291_03_06_pc=None,
-                material_v1_381_67_09_pc=None,
-            )
-
-            bff_class_obj = BffClass(
-                bff_class_class=Class(
-                    animation=None,
-                    animation_graph=None,
-                    animation_graph_override=None,
-                    anim_frame=None,
-                    area_light=None,
-                    binary=None,
-                    bitmap=None,
-                    camera=None,
-                    camera_zone=None,
-                    collision_vol=None,
-                    collision_vol_data=None,
-                    conductor=None,
-                    decal=None,
-                    dialog_event=None,
-                    entity=None,
-                    flare=None,
-                    flare_data=None,
-                    fog_volume=None,
-                    fonts=None,
-                    fx_particles=None,
-                    fx_particles_data=None,
-                    game_obj=None,
-                    gen_world=None,
-                    graph=None,
-                    gw_road=None,
-                    h_fog=None,
-                    h_fog_data=None,
-                    hull_spline_zone=None,
-                    light=None,
-                    light_data=None,
-                    light_probe_volume=None,
-                    lod=None,
-                    lod_data=None,
-                    mass_instancing_volume=None,
-                    material=wrapped_material,
-                    material_anim=None,
-                    material_collect=None,
-                    material_obj=None,
-                    mesh=None,
-                    mesh_data=None,
-                    net_bing_obj=None,
-                    node=None,
-                    occluder=None,
-                    omni=None,
-                    omni_data=None,
-                    override=None,
-                    particles=None,
-                    particles_data=None,
-                    prefab=None,
-                    prefab_ref=None,
-                    reflection_probe=None,
-                    rot_shape=None,
-                    rot_shape_data=None,
-                    rtc=None,
-                    shader=None,
-                    skel=None,
-                    skin=None,
-                    skin_data=None,
-                    sound=None,
-                    sound_event=None,
-                    special_effect_node=None,
-                    spline=None,
-                    spline_graph=None,
-                    spline_zone=None,
-                    surface=None,
-                    surface_datas=None,
-                    terrain=None,
-                    texture=None,
-                    txt=None,
-                    user_define=None,
-                    user_define_script=None,
-                    warp=None,
-                    world=None,
-                    world_ref=None,
-                    x_ref_node=None,
-                ),
-                header=header,
-            )
-
-            resource_dict = bff_class_obj.to_dict()
-
-            with open(self.filepath, "w", encoding="utf-8") as f:
-                json.dump(resource_dict, f, indent=2, ensure_ascii=False)
+            print(f"---- EXPORTING RESOURCE {self.filepath} -----")
+            export_resource(generic_material, self.filepath)
+            self.report({"INFO"}, f"Exported resource: {self.filepath}")
+            print(f"---- EXPORTED RESOURCE {self.filepath} -----")
 
             self.report({"INFO"}, f"Saved Zouna material to: {self.filepath}")
             return {"FINISHED"}
@@ -270,28 +177,28 @@ class ZounaMaterialPanel(Panel):
 
             texture_column.label(text="Diffuse")
             texture_column.template_ID(zouna_properties, "diffuse", open="image.open")
-            diffuse_image = getattr(zouna_properties, "diffuse", None)
+            diffuse_image = zouna_properties.diffuse
             if diffuse_image:
                 texture_column.template_icon(diffuse_image.preview.icon_id, scale=6)
 
             texture_column.separator()
             texture_column.label(text="Envmap")
             texture_column.template_ID(zouna_properties, "envmap", open="image.open")
-            envmap_image = getattr(zouna_properties, "envmap", None)
+            envmap_image = zouna_properties.envmap
             if envmap_image:
                 texture_column.template_icon(envmap_image.preview.icon_id, scale=6)
 
             texture_column.separator()
             texture_column.label(text="Normal")
             texture_column.template_ID(zouna_properties, "normal", open="image.open")
-            normal_image = getattr(zouna_properties, "normal", None)
+            normal_image = zouna_properties.normal
             if normal_image:
                 texture_column.template_icon(normal_image.preview.icon_id, scale=6)
 
             texture_column.separator()
             texture_column.label(text="Specular")
             texture_column.template_ID(zouna_properties, "specular", open="image.open")
-            specular_image = getattr(zouna_properties, "specular", None)
+            specular_image = zouna_properties.specular
             if specular_image:
                 texture_column.template_icon(specular_image.preview.icon_id, scale=6)
 
