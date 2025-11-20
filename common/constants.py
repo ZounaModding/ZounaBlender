@@ -88,10 +88,10 @@ class ColPrimitiveCategory(StrEnum):
 
 CATEGORY_COLORS = {
     "COLLIDER": (0.0, 1.0, 0.0, 1.0),  # green
-    "SHADOW": (1.0, 1.0, 1.0, 1.0),  # white
+    "SHADOW": (0.6, 0.6, 0.6, 1.0),  # gray
     "COLLECT": (0.0, 0.0, 1.0, 1.0),  # blue
     "COLLECTABLE": (0.0, 0.9, 0.9, 1.0),  # teal-cyan
-    "LOD": (1.0, 0.3, 0.0, 1.0),  # bright orange
+    "LOD": (1.0, 0.5, 0.0, 1.0),  # bright orange
     "STRENGTH": (0.6, 0.0, 0.8, 1.0),  # deep violet
     "KICK": (0.2, 0.9, 0.4, 1.0),  # vivid spring green
     "NFADE": (1.0, 0.2, 0.0, 1.0),  # red-orange
