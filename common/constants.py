@@ -60,12 +60,80 @@ class BmTransp(IntEnum):
     BM_TRANSP = 2
 
 
+# Mesh constants
+
+
+class ColPrimitiveType(StrEnum):
+    NONE = "NONE"
+    SPHERE = "SPHERE"
+    BOX = "BOX"
+    CYLINDER = "CYLINDER"
+
+
+class ColPrimitiveCategory(StrEnum):
+    COLLIDER = "COLLIDER"
+    SHADOW = "SHADOW"
+    COLLECT = "COLLECT"
+    COLLECTABLE = "COLLECTABLE"
+    LOD = "LOD"
+    STRENGTH = "STRENGTH"
+    KICK = "KICK"
+    NFADE = "NFADE"
+    FADE = "FADE"
+    ACTION = "ACTION"
+    MAGNET = "MAGNET"
+    INTER = "INTER"
+    REPULSE = "REPULSE"
+
+
+CATEGORY_COLORS = {
+    "COLLIDER": (0.0, 1.0, 0.0, 1.0),  # green
+    "SHADOW": (1.0, 1.0, 1.0, 1.0),  # white
+    "COLLECT": (0.0, 0.0, 1.0, 1.0),  # blue
+    "COLLECTABLE": (0.0, 0.9, 0.9, 1.0),  # teal-cyan
+    "LOD": (1.0, 0.3, 0.0, 1.0),  # bright orange
+    "STRENGTH": (0.6, 0.0, 0.8, 1.0),  # deep violet
+    "KICK": (0.2, 0.9, 0.4, 1.0),  # vivid spring green
+    "NFADE": (1.0, 0.2, 0.0, 1.0),  # red-orange
+    "FADE": (1.0, 0.9, 0.3, 1.0),  # warm yellow
+    "ACTION": (0.9, 0.1, 0.1, 1.0),  # red
+    "MAGNET": (0.9, 0.0, 0.9, 1.0),  # bright magenta
+    "INTER": (0.1, 0.6, 0.9, 1.0),  # sky blue
+    "REPULSE": (1.0, 1.0, 0.0, 1.0),  # yellow
+}
+
+col_primitive_categories = [
+    (ColPrimitiveCategory.COLLIDER.name, "Collider", "Collision primitive"),
+    (ColPrimitiveCategory.SHADOW.name, "Shadow", "Shadow primitive"),
+    (ColPrimitiveCategory.COLLECT.name, "Collect", "Collect primitive"),
+    (ColPrimitiveCategory.COLLECTABLE.name, "Collectable", "Collectable primitive"),
+    (ColPrimitiveCategory.LOD.name, "LOD", "Level of Detail primitive"),
+    (ColPrimitiveCategory.STRENGTH.name, "Strength", "Strength primitive"),
+    (ColPrimitiveCategory.KICK.name, "Kick", "Kick primitive"),
+    (ColPrimitiveCategory.NFADE.name, "NFade", "Near Fade primitive"),
+    (ColPrimitiveCategory.FADE.name, "Fade", "Fade primitive"),
+    (ColPrimitiveCategory.ACTION.name, "Action", "Action primitive"),
+    (ColPrimitiveCategory.MAGNET.name, "Magnet", "Magnet primitive"),
+    (ColPrimitiveCategory.INTER.name, "Inter", "Inter primitive"),
+    (ColPrimitiveCategory.REPULSE.name, "Repulse", "Repulse primitive"),
+]
+
+col_primitive_types = [
+    (ColPrimitiveType.NONE.name, "NoPrimitive", "No collision primitive"),
+    (ColPrimitiveType.BOX.name, "Box", "Box collision primitive"),
+    (ColPrimitiveType.SPHERE.name, "Sphere", "Sphere collision primitive"),
+    (ColPrimitiveType.CYLINDER.name, "Cylinder", "Cylinder collision primitive"),
+]
+
+
 # Rat constants
 
 
 class RatSurfaceTypes(StrEnum):
     NONE = "NONE"
     SOLID = "SOLID"
+    COLLECT = "COLLECT"
+    COLLECTABLE = "COLLECTABLE"
     WATER = "WATER"
     SLIPPERY = "SLIPPERY"
     STICKY = "STICKY"
@@ -85,6 +153,57 @@ class RatSoundTypes(StrEnum):
     POPPING = "POPPING"
 
 
+rat_surface_types = [
+    (RatSurfaceTypes.NONE, "None", "No collision"),
+    (RatSurfaceTypes.SOLID, "Ground", "Solid ground that can be walked on"),
+    (RatSurfaceTypes.COLLECT, "Collect", "Collect surface (collects)"),
+    (
+        RatSurfaceTypes.COLLECTABLE,
+        "Collectable",
+        "Collectable surface (that can be collected)",
+    ),
+    # Breaks Alpha Mask for Envmap (textures that expect that will be shown broken)
+    (
+        RatSurfaceTypes.WATER,
+        "Water",
+        "Water surface which will damage the player when in contact",
+    ),
+    (
+        RatSurfaceTypes.SLIPPERY,
+        "Slippery",
+        "Slippery surface that will cause the player to slip",
+    ),
+    (
+        RatSurfaceTypes.STICKY,
+        "Sticky",
+        "Sticky surface that will cause the player to slow down",
+    ),
+    (
+        RatSurfaceTypes.SLIDE_JUMP,
+        "Slide",
+        "Slide surface that will cause the player to slide",
+    ),
+    (
+        RatSurfaceTypes.SLIDE_NO_JUMP,
+        "Slide No Jump",
+        "Slide surface that will cause the player to slide, disables jumping",
+    ),
+]
+
+
+rat_sound_types = [
+    (RatSoundTypes.STONE, "Stone", "Stone sound"),
+    (RatSoundTypes.WOOD, "Wood", "Wood sound"),
+    (RatSoundTypes.DIRT, "Dirt", "Dirt sound"),
+    (RatSoundTypes.GRASS, "Grass", "Grass sound"),
+    (RatSoundTypes.METAL, "Metal", "Metal sound"),
+    (RatSoundTypes.WATER, "Water", "Water sound"),
+    (RatSoundTypes.MUD, "Mud", "Mud sound"),
+    (RatSoundTypes.SQUEAKY, "Squeaky", "Squeaky sound"),
+    (RatSoundTypes.POPPING, "Popping", "Popping sound"),
+]
+
+
 class RatMaterialRenderFlags(IntFlag):
     NONE = 0x0
     ALPHA_MASK = 0x1
@@ -94,9 +213,12 @@ class RatMaterialRenderFlags(IntFlag):
     INVISIBLE = 0x80
     UV_CLAMP_U = 0x100
     UV_CLAMP_V = 0x200
-    ICE = 0x1000  # not sure if ice, and not rat specific def
+    BLEND_ADDITIVE = 0x1000
+    BLEND_SUBTRACTIVE = 0x2000
+    BLEND_DEST_ADDITIVE = 0x4000
     DOUBLE_SIDED = 0x20000
     UNK_800000_USED = 0x800000
+    DEFAULT = UNK_800000_USED
 
 
 class RatMaterialCollisionFlags(IntFlag):
@@ -105,7 +227,8 @@ class RatMaterialCollisionFlags(IntFlag):
     COLLIDABLE = 0x2
     UNK_4_USED = 0x4
     NO_WALKING = 0x8
-    UNK_20000_USED = 0x20000
+    COLLECT = 0x8000
+    COLLECTABLE = 0x20000
     SOUND_1 = 0x40000
     SOUND_2 = 0x80000
     SOUND_3 = 0x100000
@@ -118,11 +241,12 @@ class RatMaterialCollisionFlags(IntFlag):
     WATER = NO_WALKING | SLIDE_JUMP | SLIDE_NO_JUMP
     SLIPPERY = SLIDE_JUMP | SURFACE_1
     STICKY = SLIDE_NO_JUMP | SURFACE_1
+    DEFAULT = UNK_1_USED | UNK_4_USED
     SOLID = UNK_1_USED | COLLIDABLE | UNK_4_USED
     SOUND_WATER = SOUND_1
     SOUND_DIRT = SOUND_2
     SOUND_WOOD = SOUND_3
-    SOUND_MUD = SOUND_4
+    SOUND_MUD = SOUND_4  # MEAT sound?
     SOUND_GRASS = SOUND_1 | SOUND_2
     SOUND_METAL = SOUND_1 | SOUND_3
     SOUND_SQUEAKY = SOUND_2 | SOUND_3
@@ -210,48 +334,33 @@ def collision_flag_to_rat_surface_type(collision_flag: int) -> RatSurfaceTypes:
     solid_bits = RatMaterialCollisionFlags.SOLID
     has_solid = (flag & solid_bits) == solid_bits
 
-    if (
-        has_solid
-        and (flag & RatMaterialCollisionFlags.WATER) == RatMaterialCollisionFlags.WATER
-    ):
-        return RatSurfaceTypes.WATER
-    if (
-        has_solid
-        and (flag & RatMaterialCollisionFlags.SLIPPERY)
-        == RatMaterialCollisionFlags.SLIPPERY
-    ):
-        return RatSurfaceTypes.SLIPPERY
-    if (
-        has_solid
-        and (flag & RatMaterialCollisionFlags.STICKY)
-        == RatMaterialCollisionFlags.STICKY
-    ):
-        return RatSurfaceTypes.SLIPPERY
-    if has_solid and (flag & RatMaterialCollisionFlags.SLIDE_JUMP) != 0:
-        return RatSurfaceTypes.SLIDE_JUMP
-    if has_solid and (flag & RatMaterialCollisionFlags.SLIDE_NO_JUMP) != 0:
-        return RatSurfaceTypes.SLIDE_NO_JUMP
     if has_solid:
+        if (flag & RatMaterialCollisionFlags.WATER) == RatMaterialCollisionFlags.WATER:
+            return RatSurfaceTypes.WATER
+        if (
+            flag & RatMaterialCollisionFlags.SLIPPERY
+        ) == RatMaterialCollisionFlags.SLIPPERY:
+            return RatSurfaceTypes.SLIPPERY
+        if (
+            flag & RatMaterialCollisionFlags.STICKY
+        ) == RatMaterialCollisionFlags.STICKY:
+            return RatSurfaceTypes.STICKY
+        if (flag & RatMaterialCollisionFlags.SLIDE_JUMP) != 0:
+            return RatSurfaceTypes.SLIDE_JUMP
+        if (flag & RatMaterialCollisionFlags.SLIDE_NO_JUMP) != 0:
+            return RatSurfaceTypes.SLIDE_NO_JUMP
         return RatSurfaceTypes.SOLID
-
-    if collision_flag != 0:
-        parts = []
-        for name, member in (
-            ("UNK_1_USED", RatMaterialCollisionFlags.UNK_1_USED),
-            ("COLLIDABLE", RatMaterialCollisionFlags.COLLIDABLE),
-            ("UNK_4_USED", RatMaterialCollisionFlags.UNK_4_USED),
-            ("NO_WALKING", RatMaterialCollisionFlags.NO_WALKING),
-            ("SLIDE_JUMP", RatMaterialCollisionFlags.SLIDE_JUMP),
-            ("SLIDE_NO_JUMP", RatMaterialCollisionFlags.SLIDE_NO_JUMP),
-            ("STICKY", RatMaterialCollisionFlags.STICKY),
-            ("FOOTPRINTS_ON", RatMaterialCollisionFlags.FOOTPRINTS_ON),
-            ("FOOTPRINTS_OFF", RatMaterialCollisionFlags.FOOTPRINTS_OFF),
-        ):
-            if int(flag) & int(member):
-                parts.append(name)
+    if (flag & RatMaterialCollisionFlags.COLLECT) == RatMaterialCollisionFlags.COLLECT:
+        return RatSurfaceTypes.COLLECT
+    if (
+        flag & RatMaterialCollisionFlags.COLLECTABLE
+    ) == RatMaterialCollisionFlags.COLLECTABLE:
+        return RatSurfaceTypes.COLLECTABLE
+    if collision_flag != RatMaterialCollisionFlags.DEFAULT:
+        parts = [m.name for m in RatMaterialCollisionFlags if flag & m]
 
         print(
-            "ERROR: Flag wasn't empty but did not match any surface type",
+            "ERROR: Flag wasn't default but did not match any surface type",
             f"raw=0x{collision_flag:x}",
             f"bits={parts}",
         )
@@ -306,3 +415,69 @@ def collision_flag_to_rat_sound_type(collision_flag: int) -> RatSoundTypes:
         )
 
     return RatSoundTypes.STONE
+
+
+def rat_values_to_collision_flag(
+    rat_surface_type: RatSurfaceTypes,
+    rat_sound_type: RatSoundTypes,
+    foot_on: bool,
+    foot_off: bool,
+) -> int:
+    """Build the integer collision flag from the collision UI properties."""
+
+    collision_flag = RatMaterialCollisionFlags.NONE
+
+    print(f"rat_surface_type: {rat_surface_type}")
+    rat_surface = rat_surface_type
+    surface_map = {
+        RatSurfaceTypes.NONE: RatMaterialCollisionFlags.DEFAULT,
+        RatSurfaceTypes.SOLID: RatMaterialCollisionFlags.SOLID,
+        RatSurfaceTypes.COLLECT: RatMaterialCollisionFlags.COLLECT,
+        RatSurfaceTypes.COLLECTABLE: RatMaterialCollisionFlags.COLLECTABLE,
+        RatSurfaceTypes.WATER: RatMaterialCollisionFlags.WATER
+        | RatMaterialCollisionFlags.SOLID,
+        RatSurfaceTypes.SLIPPERY: RatMaterialCollisionFlags.SLIPPERY
+        | RatMaterialCollisionFlags.SOLID,
+        RatSurfaceTypes.STICKY: RatMaterialCollisionFlags.STICKY
+        | RatMaterialCollisionFlags.SOLID,
+        RatSurfaceTypes.SLIDE_JUMP: RatMaterialCollisionFlags.SLIDE_JUMP
+        | RatMaterialCollisionFlags.SOLID,
+        RatSurfaceTypes.SLIDE_NO_JUMP: RatMaterialCollisionFlags.SLIDE_NO_JUMP
+        | RatMaterialCollisionFlags.SOLID,
+    }
+    collision_flag |= surface_map.get(rat_surface, 0)
+    print(f"collision_flag after surface: {collision_flag}")
+
+    rat_sound = rat_sound_type
+    sound_map = {
+        RatSoundTypes.WOOD: RatMaterialCollisionFlags.SOUND_WOOD,
+        RatSoundTypes.DIRT: RatMaterialCollisionFlags.SOUND_DIRT,
+        RatSoundTypes.GRASS: RatMaterialCollisionFlags.SOUND_GRASS,
+        RatSoundTypes.METAL: RatMaterialCollisionFlags.SOUND_METAL,
+        RatSoundTypes.WATER: RatMaterialCollisionFlags.SOUND_WATER,
+        RatSoundTypes.MUD: RatMaterialCollisionFlags.SOUND_MUD,
+        RatSoundTypes.SQUEAKY: RatMaterialCollisionFlags.SOUND_SQUEAKY,
+        RatSoundTypes.POPPING: RatMaterialCollisionFlags.SOUND_POPPING,
+    }
+    if rat_sound is not None and rat_sound is not RatSoundTypes.STONE:
+        collision_flag |= sound_map.get(rat_sound, 0)
+
+    if foot_off:
+        collision_flag |= RatMaterialCollisionFlags.FOOTPRINTS_OFF
+    if foot_on:
+        collision_flag |= RatMaterialCollisionFlags.FOOTPRINTS_ON
+
+    return collision_flag
+
+
+def export_collision_name(col_primitive_category: ColPrimitiveCategory) -> str:
+    """
+    Export the collision 'name' field for SphereCol/BoxCol/CylindreCol.
+
+    - COLLIDER  -> "DURL"
+    - everything else: use the enum string as-is
+    """
+    if col_primitive_category == ColPrimitiveCategory.COLLIDER.name:
+        return "DURL"
+
+    return col_primitive_category

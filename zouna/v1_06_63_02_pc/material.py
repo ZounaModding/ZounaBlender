@@ -3,9 +3,9 @@ from ...common.constants import (
     RatMaterialRenderFlags,
     RatMaterialCodeFlags,
     RatSurfaceTypes,
-    RatSoundTypes,
     collision_flag_to_rat_surface_type,
     collision_flag_to_rat_sound_type,
+    rat_values_to_collision_flag,
 )
 from ..bff.io import (
     MaterialV106_63_02PCBody,
@@ -98,7 +98,7 @@ class MaterialV1_06_63_02_PC:
             [-1.0, -1.0, 1.0, 0.0],
         ]
 
-        body.render_flag = 0x800000
+        body.render_flag = RatMaterialRenderFlags.DEFAULT
         if generic_material.env_alpha_mask:
             body.render_flag |= RatMaterialRenderFlags.ALPHA_MASK
         if generic_material.invisible:
@@ -107,48 +107,21 @@ class MaterialV1_06_63_02_PC:
             body.render_flag |= RatMaterialRenderFlags.UV_CLAMP_U
         if generic_material.uv_clamp_v:
             body.render_flag |= RatMaterialRenderFlags.UV_CLAMP_V
+        if generic_material.blend_additive:
+            body.render_flag |= RatMaterialRenderFlags.BLEND_ADDITIVE
+        if generic_material.blend_subtractive:
+            body.render_flag |= RatMaterialRenderFlags.BLEND_SUBTRACTIVE
+        if generic_material.blend_dest_additive:
+            body.render_flag |= RatMaterialRenderFlags.BLEND_DEST_ADDITIVE
         if generic_material.double_sided:
             body.render_flag |= RatMaterialRenderFlags.DOUBLE_SIDED
-        if generic_material.rat_ice:
-            body.render_flag |= RatMaterialRenderFlags.ICE
 
-        collision_flag = 0
-
-        rat_surface = generic_material.rat_surface_type
-        surface_map = {
-            RatSurfaceTypes.NONE: RatMaterialCollisionFlags.NONE,
-            RatSurfaceTypes.SOLID: RatMaterialCollisionFlags.SOLID,
-            RatSurfaceTypes.WATER: RatMaterialCollisionFlags.WATER
-            | RatMaterialCollisionFlags.SOLID,
-            RatSurfaceTypes.SLIPPERY: RatMaterialCollisionFlags.SLIPPERY
-            | RatMaterialCollisionFlags.SOLID,
-            RatSurfaceTypes.STICKY: RatMaterialCollisionFlags.STICKY
-            | RatMaterialCollisionFlags.SOLID,
-            RatSurfaceTypes.SLIDE_JUMP: RatMaterialCollisionFlags.SLIDE_JUMP
-            | RatMaterialCollisionFlags.SOLID,
-            RatSurfaceTypes.SLIDE_NO_JUMP: RatMaterialCollisionFlags.SLIDE_NO_JUMP
-            | RatMaterialCollisionFlags.SOLID,
-        }
-        collision_flag |= surface_map.get(rat_surface, 0)
-
-        rat_sound = generic_material.rat_sound_type
-        sound_map = {
-            RatSoundTypes.WOOD: RatMaterialCollisionFlags.SOUND_WOOD,
-            RatSoundTypes.DIRT: RatMaterialCollisionFlags.SOUND_DIRT,
-            RatSoundTypes.GRASS: RatMaterialCollisionFlags.SOUND_GRASS,
-            RatSoundTypes.METAL: RatMaterialCollisionFlags.SOUND_METAL,
-            RatSoundTypes.WATER: RatMaterialCollisionFlags.SOUND_WATER,
-            RatSoundTypes.MUD: RatMaterialCollisionFlags.SOUND_MUD,
-            RatSoundTypes.SQUEAKY: RatMaterialCollisionFlags.SOUND_SQUEAKY,
-            RatSoundTypes.POPPING: RatMaterialCollisionFlags.SOUND_POPPING,
-        }
-        if rat_sound is not None and rat_sound is not RatSoundTypes.STONE:
-            collision_flag |= sound_map.get(rat_sound, 0)
-
-        if generic_material.rat_footprints_while_off:
-            collision_flag |= RatMaterialCollisionFlags.FOOTPRINTS_OFF
-        if generic_material.rat_footprints_while_on:
-            collision_flag |= RatMaterialCollisionFlags.FOOTPRINTS_ON
+        collision_flag = rat_values_to_collision_flag(
+            generic_material.rat_surface_type,
+            generic_material.rat_sound_type,
+            generic_material.rat_footprints_while_off,
+            generic_material.rat_footprints_while_on,
+        )
 
         body.collision_flag = collision_flag
 
@@ -236,10 +209,18 @@ class MaterialV1_06_63_02_PC:
         generic_material.uv_clamp_v = bool(
             body.render_flag & RatMaterialRenderFlags.UV_CLAMP_V
         )
+        generic_material.blend_additive = bool(
+            body.render_flag & RatMaterialRenderFlags.BLEND_ADDITIVE
+        )
+        generic_material.blend_subtractive = bool(
+            body.render_flag & RatMaterialRenderFlags.BLEND_SUBTRACTIVE
+        )
+        generic_material.blend_dest_additive = bool(
+            body.render_flag & RatMaterialRenderFlags.BLEND_DEST_ADDITIVE
+        )
         generic_material.double_sided = bool(
             body.render_flag & RatMaterialRenderFlags.DOUBLE_SIDED
         )
-        generic_material.rat_ice = bool(body.render_flag & RatMaterialRenderFlags.ICE)
 
         # Collision flags
         collision_flag = body.collision_flag

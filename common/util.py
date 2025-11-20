@@ -1,4 +1,7 @@
-import bpy, os
+import bpy, os, bmesh
+from bpy.types import Object
+from mathutils import Vector, Matrix
+from math import radians
 import struct
 
 
@@ -67,3 +70,69 @@ def read_dds_fourcc(data: bytes) -> str:
         return data[FOURCC_OFFSET : FOURCC_OFFSET + 4].decode("ascii")
     except:
         return ""
+
+
+def get_selected_verts_world_pos(obj: bpy.types.Object) -> list[Vector]:
+    """
+    Get world positions of selected vertices.
+    """
+    if not obj.type == "MESH":
+        return []
+
+    if bpy.context.mode == "EDIT_MESH":
+        obj.update_from_editmode()
+        mesh = obj.data
+        bm = bmesh.new()
+
+        bm.from_mesh(mesh, face_normals=False, vertex_normals=False)
+        verts_world_pos = []
+
+        for vert in bm.verts:
+            if not vert.select:
+                continue
+            world_pos = obj.matrix_world @ vert.co
+            verts_world_pos.append(world_pos)
+
+        bm.free()
+        return verts_world_pos
+    elif bpy.context.mode == "OBJECT":
+        mesh = obj.data
+        bm = bmesh.new()
+        bm.from_mesh(mesh, face_normals=False, vertex_normals=False)
+        verts_world_pos = []
+        for vert in bm.verts:
+            world_pos = obj.matrix_world @ vert.co
+            verts_world_pos.append(world_pos)
+        bm.free()
+        return verts_world_pos
+    else:
+        return []
+
+
+def get_verts_bbox(verts_world_pos: list[Vector]) -> tuple[float, Vector]:
+    """
+    Calculate world bounding box of vertices.
+    """
+    min_coord = Vector((float("inf"), float("inf"), float("inf")))
+    max_coord = Vector((float("-inf"), float("-inf"), float("-inf")))
+
+    for world_pos in verts_world_pos:
+        min_coord = Vector(
+            (
+                min(min_coord.x, world_pos.x),
+                min(min_coord.y, world_pos.y),
+                min(min_coord.z, world_pos.z),
+            )
+        )
+        max_coord = Vector(
+            (
+                max(max_coord.x, world_pos.x),
+                max(max_coord.y, world_pos.y),
+                max(max_coord.z, world_pos.z),
+            )
+        )
+
+    center = (min_coord + max_coord) / 2
+    scale = (max_coord - min_coord) / 2
+
+    return center, scale

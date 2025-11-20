@@ -31,7 +31,7 @@ class ImportResourceOperator(Operator):
 
 
 class ResourcePanel(Panel):
-    bl_idname = "ZOUNA_PT_Resource_Panel"
+    bl_idname = "zouna.resource_panel"
     bl_label = "Zouna Panel"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"

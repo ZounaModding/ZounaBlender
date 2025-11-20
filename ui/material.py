@@ -12,6 +12,8 @@ from ..zouna.bff.io import (
     Material as BffMaterial,
 )
 from ..blender.exp import export_resource
+from .common.sound_dropdown import draw_sound_ui
+from .util import ui_labeled_row
 
 import bpy
 import os
@@ -118,7 +120,7 @@ class SaveZounaMaterialOperator(bpy.types.Operator):
 
 class ZounaMaterialPanel(Panel):
     bl_label = "Zouna Material"
-    bl_idname = "ZOUNA_PT_Material_Panel"
+    bl_idname = "zouna.material_panel"
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "material"
@@ -203,27 +205,43 @@ class ZounaMaterialPanel(Panel):
                 texture_column.template_icon(specular_image.preview.icon_id, scale=6)
 
         elif zouna_properties.menu_tab == "Collision":
-            collision_box = layout.box()
-            collision_box.label(text="Surface / Sound", icon="MESH_CUBE")
-            collision_box.prop(
-                zouna_properties, "rat_surface_type", text="Surface Type"
-            )
-            collision_box.prop(zouna_properties, "rat_sound_type", text="Sound Type")
+            box = layout.box()
+            box.label(text="Surface / Sound", icon="MESH_CUBE")
 
-            collision_box.separator()
+            ui_labeled_row(
+                box,
+                "Surface Type:",
+                lambda col: col.prop(zouna_properties, "rat_surface_type", text=""),
+                "MATERIAL",
+            )
 
-            collision_box.prop(
-                zouna_properties, "rat_footprints_while_on", text="Footprints While On"
+            draw_sound_ui(box, zouna_properties, "MATERIAL")
+
+            box.separator()
+
+            ui_labeled_row(
+                box,
+                "Footprints On:",
+                lambda col: col.prop(
+                    zouna_properties, "rat_footprints_while_on", text=""
+                ),
+                "MATERIAL",
             )
-            collision_box.prop(
-                zouna_properties,
-                "rat_footprints_while_off",
-                text="Footprints While Off",
+            ui_labeled_row(
+                box,
+                "Footprints Off:",
+                lambda col: col.prop(
+                    zouna_properties, "rat_footprints_while_off", text=""
+                ),
+                "MATERIAL",
             )
-            collision_box.prop(zouna_properties, "rat_ice", text="Ice/Glass")
+
             if zouna_properties.rat_surface_type == RatSurfaceTypes.WATER:
-                collision_box.prop(
-                    zouna_properties, "rat_deep_water", text="Deep Water"
+                ui_labeled_row(
+                    box,
+                    "Deep Water:",
+                    lambda col: col.prop(zouna_properties, "rat_deep_water", text=""),
+                    "MATERIAL",
                 )
 
         elif zouna_properties.menu_tab == "Render":
@@ -235,6 +253,17 @@ class ZounaMaterialPanel(Panel):
             render_box.prop(zouna_properties, "invisible", text="Invisible")
             render_box.prop(zouna_properties, "uv_clamp_u", text="Clamp U")
             render_box.prop(zouna_properties, "uv_clamp_v", text="Clamp V")
+            render_box.prop(
+                zouna_properties, "blend_additive", text="Additive Blending"
+            )
+            render_box.prop(
+                zouna_properties, "blend_subtractive", text="Subtractive Blending"
+            )
+            render_box.prop(
+                zouna_properties,
+                "blend_dest_additive",
+                text="Destination Additive Blending",
+            )
             render_box.prop(zouna_properties, "double_sided", text="Double Sided")
 
 

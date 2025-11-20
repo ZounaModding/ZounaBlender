@@ -2,7 +2,13 @@ import bpy
 from bpy.types import PropertyGroup, Material, Image
 from bpy.utils import register_class, unregister_class
 
-from ...common.constants import RatSurfaceTypes, RatSoundTypes
+from ...common.constants import (
+    RatSurfaceTypes,
+    RatSoundTypes,
+    rat_surface_types,
+    rat_sound_types,
+)
+from ..shared.collision import update_zouna_collision_properties
 from ...common.util import get_material_from_context
 from ...common.material import create_zouna_material_node_tree
 from .resource import ZounaResourceProperty
@@ -15,51 +21,6 @@ from ...zouna.bff.io import Platform
 def material_menu_tabs(_self, context):
     items = ["Parameters", "Sources", "Collision", "Render"]
     return [(item, item, item) for item in items]
-
-
-rat_surface_types = [
-    (RatSurfaceTypes.NONE, "None", "No collision"),
-    (RatSurfaceTypes.SOLID, "Ground", "Solid ground that can be walked on"),
-    # Breaks Alpha Mask for Envmap (textures that expect that will be shown broken)
-    (
-        RatSurfaceTypes.WATER,
-        "Water",
-        "Water surface which will damage the player when in contact",
-    ),
-    (
-        RatSurfaceTypes.SLIPPERY,
-        "Slippery",
-        "Slippery surface that will cause the player to slip",
-    ),
-    (
-        RatSurfaceTypes.STICKY,
-        "Sticky",
-        "Sticky surface that will cause the player to slow down",
-    ),
-    (
-        RatSurfaceTypes.SLIDE_JUMP,
-        "Slide",
-        "Slide surface that will cause the player to slide",
-    ),
-    (
-        RatSurfaceTypes.SLIDE_NO_JUMP,
-        "Slide No Jump",
-        "Slide surface that will cause the player to slide, disables jumping",
-    ),
-]
-
-
-rat_sound_types = [
-    (RatSoundTypes.STONE, "Stone", "Stone sound"),
-    (RatSoundTypes.WOOD, "Wood", "Wood sound"),
-    (RatSoundTypes.DIRT, "Dirt", "Dirt sound"),
-    (RatSoundTypes.GRASS, "Grass", "Grass sound"),
-    (RatSoundTypes.METAL, "Metal", "Metal sound"),
-    (RatSoundTypes.WATER, "Water", "Water sound"),
-    (RatSoundTypes.MUD, "Mud", "Mud sound"),
-    (RatSoundTypes.SQUEAKY, "Squeaky", "Squeaky sound"),
-    (RatSoundTypes.POPPING, "Popping", "Popping sound"),
-]
 
 
 def update_zouna_material_property(self, context):
@@ -245,6 +206,24 @@ class ZounaMaterialProperty(ZounaResourceProperty):
         update=update_zouna_material_property,
     )
 
+    blend_additive: bpy.props.BoolProperty(
+        name="Additive Blending",
+        description="Use additive blending for the material",
+        default=False,
+    )
+
+    blend_subtractive: bpy.props.BoolProperty(
+        name="Subtractive Blending",
+        description="Use subtractive blending for the material",
+        default=False,
+    )
+
+    blend_dest_additive: bpy.props.BoolProperty(
+        name="Destination Additive Blending",
+        description="Use destination additive blending for the material",
+        default=False,
+    )
+
     double_sided: bpy.props.BoolProperty(
         name="Double Sided",
         description="Disable back face culling",
@@ -258,11 +237,17 @@ class ZounaMaterialProperty(ZounaResourceProperty):
     # Rat Collision Settings
     # There are more unknown ones, like affecting particles
 
+    last_rat_surface_type: bpy.props.EnumProperty(
+        items=rat_surface_types,
+        default=RatSurfaceTypes.NONE,
+    )
+
     rat_surface_type: bpy.props.EnumProperty(
         name="Surface Type",
         description="Determines the type of surface and the interactions with the player",
         items=rat_surface_types,
-        default=RatSurfaceTypes.SOLID,
+        default=RatSurfaceTypes.NONE,
+        update=update_zouna_collision_properties,
     )
 
     rat_sound_type: bpy.props.EnumProperty(
@@ -270,6 +255,7 @@ class ZounaMaterialProperty(ZounaResourceProperty):
         description="Determines the sound that will play when the player walks on the surface",
         items=rat_sound_types,
         default=RatSoundTypes.STONE,
+        update=update_zouna_collision_properties,
     )
 
     # Only show if rat surface is water
@@ -292,13 +278,6 @@ class ZounaMaterialProperty(ZounaResourceProperty):
     )
 
     # Rat Render Settings
-
-    # Not sure if ice, and not rat specific def
-    rat_ice: bpy.props.BoolProperty(
-        name="Ice/Glass",
-        description="Gives a ice/glass like effect",
-        default=False,
-    )
 
     # UI
 

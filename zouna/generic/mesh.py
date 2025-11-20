@@ -1,17 +1,20 @@
 from math import sqrt
 from ..bff.io import SphereCol, BoxCol, CylindreCol, Box, Sphere
 from ..common.mesh import (
-    add_collision_obj,
-    create_box,
-    create_cylinder,
-    create_sphere,
+    import_box_collision,
+    import_cylinder_collision,
+    import_sphere_collision,
     xyz_zouna_to_blender,
     xyz_blender_to_zouna,
     normal_byte_to_float,
     normal_float_to_byte,
+    export_box_collision,
+    export_cylinder_collision,
+    export_sphere_collision,
 )
 from .material import Material
 from .object import Object
+from ...common.constants import ColPrimitiveType
 
 import bpy
 from mathutils import Vector, Matrix
@@ -149,20 +152,22 @@ class Mesh(Object):
             max_y = max(p[1] for p in final_positions)
             max_z = max(p[2] for p in final_positions)
 
-            center_x = (min_x + max_x) / 2.0
-            center_y = (min_y + max_y) / 2.0
-            center_z = (min_z + max_z) / 2.0
+            center_x = (min_x + max_x) * 0.5
+            center_y = (min_y + max_y) * 0.5
+            center_z = (min_z + max_z) * 0.5
 
-            half_extent_x = (max_x - min_x) / 2.0
-            half_extent_y = (max_y - min_y) / 2.0
-            half_extent_z = (max_z - min_z) / 2.0
+            half_extent_x = (max_x - min_x) * 0.5
+            half_extent_y = (max_y - min_y) * 0.5
+            half_extent_z = (max_z - min_z) * 0.5
 
             max_radius_sq = 0.0
             for p in final_positions:
                 dx = p[0] - center_x
                 dy = p[1] - center_y
                 dz = p[2] - center_z
-                max_radius_sq = max(max_radius_sq, dx * dx + dy * dy + dz * dz)
+                dist_sq = dx * dx + dy * dy + dz * dz
+                if dist_sq > max_radius_sq:
+                    max_radius_sq = dist_sq
 
             radius = sqrt(max_radius_sq)
 
@@ -170,6 +175,7 @@ class Mesh(Object):
                 center=[center_x, center_y, center_z],
                 radius=radius,
             )
+
             mesh.b_box = Box(
                 matrix=[
                     [1.0, 0.0, 0.0, center_x],
@@ -179,11 +185,9 @@ class Mesh(Object):
                 scale=max(half_extent_x, half_extent_y, half_extent_z),
                 vec=[half_extent_x, half_extent_y, half_extent_z],
             )
+
         else:
-            mesh.b_sphere = Sphere(
-                center=[0.0, 0.0, 0.0],
-                radius=1.0,
-            )
+            mesh.b_sphere = Sphere(center=[0.0, 0.0, 0.0], radius=1.0)
             mesh.b_box = Box(
                 matrix=[
                     [1.0, 0.0, 0.0, 0.0],
@@ -193,10 +197,24 @@ class Mesh(Object):
                 scale=1.0,
                 vec=[1.0, 1.0, 1.0],
             )
-
         mesh.col_spheres = []
         mesh.col_boxes = []
         mesh.col_cylindres = []
+
+        for child in blender_mesh.children:
+            if not child.is_zouna:
+                continue
+            zp = child.zouna_property
+            ctype = zp.col_primitive_type
+
+            if ctype == ColPrimitiveType.SPHERE.name:
+                mesh.col_spheres.append(export_sphere_collision(child))
+
+            elif ctype == ColPrimitiveType.BOX.name:
+                mesh.col_boxes.append(export_box_collision(child))
+
+            elif ctype == ColPrimitiveType.CYLINDER.name:
+                mesh.col_cylindres.append(export_cylinder_collision(child))
 
         return mesh
 
@@ -327,18 +345,11 @@ class Mesh(Object):
         obj = bpy.data.objects.new(self.name, mesh)
         bpy.context.collection.objects.link(obj)
 
-        # TODO: Fix this code using gizmos (MSFS2024) and support AABBCol
-
         for i, sph in enumerate(self.col_spheres):
-            radius = sph.col_sph.radius
-            add_collision_obj(obj, sph, f"col_sphere_{i}", create_sphere, radius)
-
+            import_sphere_collision(obj, sph, i)
         for i, box in enumerate(self.col_boxes):
-            add_collision_obj(obj, box, f"col_box_{i}", create_box, box)
-
+            import_box_collision(obj, box, i)
         for i, cyl in enumerate(self.col_cylindres):
-            radius = cyl.col_cylindre.radius
-            height = cyl.col_cylindre.seg.length
-            add_collision_obj(obj, cyl, f"col_cyl_{i}", create_cylinder, radius, height)
+            import_cylinder_collision(obj, cyl, i)
 
         return obj

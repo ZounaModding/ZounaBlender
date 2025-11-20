@@ -39,6 +39,9 @@ class Material(Resource):
     invisible: bool = False
     uv_clamp_u: bool = False
     uv_clamp_v: bool = False
+    blend_additive: bool = False
+    blend_subtractive: bool = False
+    blend_dest_additive: bool = False
     double_sided: bool = False
 
     rat_params: list[float] = [
@@ -47,12 +50,11 @@ class Material(Resource):
         -431602080.0,
         -431602080.0,
     ]  # Not sure if it's rat specific or not but for now
-    rat_surface_type: RatSurfaceTypes = RatSurfaceTypes.SOLID
+    rat_surface_type: RatSurfaceTypes = RatSurfaceTypes.NONE
     rat_sound_type: RatSoundTypes = RatSoundTypes.STONE
     rat_deep_water: bool = False
     rat_footprints_while_on: bool = False
     rat_footprints_while_off: bool = False
-    rat_ice: bool = False
 
     def setup_zouna_material(self):
         mat_name = self.name or "ZounaMaterial"
@@ -82,13 +84,15 @@ class Material(Resource):
         mat.zouna_material.invisible = self.invisible
         mat.zouna_material.uv_clamp_u = self.uv_clamp_u
         mat.zouna_material.uv_clamp_v = self.uv_clamp_v
+        mat.zouna_material.blend_additive = self.blend_additive
+        mat.zouna_material.blend_subtractive = self.blend_subtractive
+        mat.zouna_material.blend_dest_additive = self.blend_dest_additive
         mat.zouna_material.double_sided = self.double_sided
         mat.zouna_material.rat_surface_type = self.rat_surface_type
         mat.zouna_material.rat_sound_type = self.rat_sound_type
         mat.zouna_material.rat_deep_water = self.rat_deep_water
         mat.zouna_material.rat_footprints_while_on = self.rat_footprints_while_on
         mat.zouna_material.rat_footprints_while_off = self.rat_footprints_while_off
-        mat.zouna_material.rat_ice = self.rat_ice
         return mat
 
     @staticmethod
@@ -136,7 +140,11 @@ class Material(Resource):
 
         # TODO: Check if it makes sense (together with other TODO in Mesh.from_generic)
         try:
-            material.file_name = zouna_properties.file_name if zouna_properties.file_name != "DefaultFileName" else blender_material.name
+            material.file_name = (
+                zouna_properties.file_name
+                if zouna_properties.file_name != "DefaultFileName"
+                else blender_material.name
+            )
         except AttributeError:
             print(
                 f"Material.file_path: Blender material '{blender_material.name}' missing 'file_path' property"
@@ -205,13 +213,15 @@ class Material(Resource):
         material.invisible = zouna_properties.invisible
         material.uv_clamp_u = zouna_properties.uv_clamp_u
         material.uv_clamp_v = zouna_properties.uv_clamp_v
+        material.blend_additive = zouna_properties.blend_additive
+        material.blend_subtractive = zouna_properties.blend_subtractive
+        material.blend_dest_additive = zouna_properties.blend_dest_additive
         material.double_sided = zouna_properties.double_sided
         material.rat_surface_type = zouna_properties.rat_surface_type
         material.rat_sound_type = zouna_properties.rat_sound_type
         material.rat_deep_water = zouna_properties.rat_deep_water
         material.rat_footprints_while_on = zouna_properties.rat_footprints_while_on
         material.rat_footprints_while_off = zouna_properties.rat_footprints_while_off
-        material.rat_ice = zouna_properties.rat_ice
 
         return material
 
@@ -269,56 +279,36 @@ class Material(Resource):
         lines.append(f"  bump_factor: {self.bump_factor!r}")
 
         lines.append("  textures:")
-        lines.append(
-            f"    tex_diffuse: {fmt_texture(self.tex_diffuse)}"
-        )
-        lines.append(
-            f"    tex_envmap: {fmt_texture(self.tex_envmap)}"
-        )
-        lines.append(
-            f"    tex_normal: {fmt_texture(self.tex_normal)}"
-        )
-        lines.append(
-            f"    tex_specular: {fmt_texture(self.tex_specular)}"
-        )
-        lines.append(
-            f"    tex_add_normal: {fmt_texture(self.tex_add_normal)}"
-        )
-        lines.append(
-            f"    tex_occlusion: {fmt_texture(self.tex_occlusion)}"
-        )
+        lines.append(f"    tex_diffuse: {fmt_texture(self.tex_diffuse)}")
+        lines.append(f"    tex_envmap: {fmt_texture(self.tex_envmap)}")
+        lines.append(f"    tex_normal: {fmt_texture(self.tex_normal)}")
+        lines.append(f"    tex_specular: {fmt_texture(self.tex_specular)}")
+        lines.append(f"    tex_add_normal: {fmt_texture(self.tex_add_normal)}")
+        lines.append(f"    tex_occlusion: {fmt_texture(self.tex_occlusion)}")
         lines.append(f"    tex_dirt: {fmt_texture(self.tex_dirt)}")
-        lines.append(
-            f"    tex_normal_local: {fmt_texture(self.tex_normal_local)}"
-        )
+        lines.append(f"    tex_normal_local: {fmt_texture(self.tex_normal_local)}")
 
         lines.append("  flags:")
-        lines.append(
-            f"    env_alpha_mask: {bool(self.env_alpha_mask)}"
-        )
+        lines.append(f"    env_alpha_mask: {bool(self.env_alpha_mask)}")
         lines.append(f"    invisible: {bool(self.invisible)}")
         lines.append(f"    uv_clamp_u: {bool(self.uv_clamp_u)}")
         lines.append(f"    uv_clamp_v: {bool(self.uv_clamp_v)}")
+        lines.append(f"    blend_additive: {bool(self.blend_additive)}")
+        lines.append(f"    blend_subtractive: {bool(self.blend_subtractive)}")
+        lines.append(f"    blend_dest_additive: {bool(self.blend_dest_additive)}")
         lines.append(f"    double_sided: {bool(self.double_sided)}")
 
         lines.append("  rat specifics:")
         lines.append(f"    rat_params: {self.rat_params!r}")
-        lines.append(
-            f"    rat_surface_type: {fmt_enum(self.rat_surface_type)}"
-        )
-        lines.append(
-            f"    rat_sound_type: {fmt_enum(self.rat_sound_type)}"
-        )
-        lines.append(
-            f"    rat_deep_water: {bool(self.rat_deep_water)}"
-        )
+        lines.append(f"    rat_surface_type: {fmt_enum(self.rat_surface_type)}")
+        lines.append(f"    rat_sound_type: {fmt_enum(self.rat_sound_type)}")
+        lines.append(f"    rat_deep_water: {bool(self.rat_deep_water)}")
         lines.append(
             f"    rat_footprints_while_on: {bool(self.rat_footprints_while_on)}"
         )
         lines.append(
             f"    rat_footprints_while_off: {bool(self.rat_footprints_while_off)}"
         )
-        lines.append(f"    rat_ice: {bool(self.rat_ice)}")
 
         if detailed_textures:
             lines.append("  (detailed texture info shown)")

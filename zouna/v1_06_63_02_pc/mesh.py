@@ -179,9 +179,9 @@ class MeshV1_06_63_02_PC:
                 collision_aabb_nodes=[], collision_faces=[]
             ),  # TODO: Implement
             aabb_vertices=[],
-            box_cols=[],
-            cylindre_cols=[],
-            sphere_cols=[],
+            box_cols=generic_mesh.col_boxes,
+            cylindre_cols=generic_mesh.col_cylindres,
+            sphere_cols=generic_mesh.col_spheres,
             strips=[],
             unk6=None,  # TODO: should be saved as null
             unk_uints=[i for i in range(len(final_prim_infos))],

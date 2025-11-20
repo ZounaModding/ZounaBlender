@@ -3,6 +3,7 @@ import traceback
 from bpy.app.handlers import persistent
 
 from .classes import register_classes, unregister_classes
+from .shared import register_shared, unregister_shared
 from ..common.constants import (
     Game,
     supported_games_for_platform,
@@ -242,6 +243,7 @@ def register_blender():
             default="",
             options={"HIDDEN"},
         )
+    register_shared()
     register_classes()
 
     if zouna_on_load_post not in bpy.app.handlers.load_post:
@@ -254,6 +256,7 @@ def unregister_blender():
     except Exception:
         traceback.print_exc()
     unregister_classes()
+    unregister_shared()
     for prop_name in (
         "zouna_envmap_toggle",
         "zouna_game",
