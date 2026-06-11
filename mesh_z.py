@@ -1,8 +1,9 @@
-def load(self, context, filepath, gameVersion, linkFormat):
+def load(self, context, filepath, gameVersion):
     pathOne = filepath
-    if gameVersion == 'WALL-E':
+    if gameVersion == "Wall-E":
         from . import mesh_z_wall_e as mesh_z
     else:
         from . import mesh_z_rat as mesh_z
-    mesh_z.loadOne(pathOne, linkFormat)
-    return True
+    # from . import mesh_z_ratPROTO as mesh_z
+
+    return mesh_z.loadOne(pathOne)
